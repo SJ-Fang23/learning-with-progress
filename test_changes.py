@@ -47,7 +47,7 @@ if __name__ == "__main__":
         "PickPlaceCan",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat"],
         rng=np.random.default_rng(SEED),
-        n_envs=6,
+        n_envs=16,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
