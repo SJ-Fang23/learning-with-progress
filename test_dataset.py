@@ -33,37 +33,45 @@ env:PickPlaceCan = suite.make(
 # print(**env_meta["env_kwargs"])
 
 print(configs)
-print(f.keys())
-print(f["mask"].keys())
-print(f["data"].keys())
+# print(f.keys())
+# print(f["mask"].keys())
+# print(f["data"].keys())
+print(f["data"]["demo_0"].keys())
+# print(f["data"]["demo_0"]["states"].keys())
 print(f["data"]["demo_0"]["obs"].keys())
+print(len(f["data"]["demo_0"]["actions"]))
+print(f["data"]["demo_0"]["actions"][-1])
+print(f["data"]["demo_0"]["actions"][-2])
+
+print(len(f["data"]["demo_0"]["dones"]))
 env_meta = json.loads(f["data"].attrs["env_args"])
-print(env_meta)
-print(f["data"]["demo_0"]["obs"]["robot0_eef_pos"][0])
+# print(env_meta)
+# print(f["data"]["demo_0"]["obs"]["robot0_eef_pos"][0])
 filter_key = "train"
 demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
 # print(demo_keys)
-print(len(list(f["data"]["demo_0"]["obs"]["object"])))
+# print(len(list(f["data"]["demo_0"]["obs"])))
+# print(f["data"]["demo_0"]["obs"]["object"])
 
-initial_position = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"][0])
+# initial_position = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"][0])
 
 
-initial_state = f["data/demo_0/states"][0]
-obs = env.reset()
-# xml = env.edit_model_xml(initial_state["model"])
-# env.reset_from_xml_string(xml)
-env.sim.set_state_from_flattened(initial_state)
-env.sim.forward()
-env.render()
+# initial_state = f["data/demo_0/states"][0]
+# obs = env.reset()
+# # xml = env.edit_model_xml(initial_state["model"])
+# # env.reset_from_xml_string(xml)
+# env.sim.set_state_from_flattened(initial_state)
+# env.sim.forward()
 # env.render()
-# for i in range(100):
-#     action = np.concatenate([initial_position,np.array([0])])
+# # env.render()
+# # for i in range(100):
+# #     action = np.concatenate([initial_position,np.array([0])])
+# #     obs,_,_,_ = env.step(action)
+# #     env.render()
+
+# # state_array = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"])
+# for i in range(len(f["data"]["demo_0"]["actions"])):
+#     action = np.array(f["data"]["demo_0"]["actions"][i])
+#     # action = np.concatenate([state_array[i],np.array([0])])
 #     obs,_,_,_ = env.step(action)
 #     env.render()
-
-# state_array = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"])
-for i in range(len(f["data"]["demo_0"]["actions"])):
-    action = np.array(f["data"]["demo_0"]["actions"][i])
-    # action = np.concatenate([state_array[i],np.array([0])])
-    obs,_,_,_ = env.step(action)
-    env.render()
