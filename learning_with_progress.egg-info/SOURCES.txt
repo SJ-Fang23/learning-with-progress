@@ -1,7 +1,0 @@
-setup.py
-envs/__init__.py
-envs/pickplace.py
-learning_with_progress.egg-info/PKG-INFO
-learning_with_progress.egg-info/SOURCES.txt
-learning_with_progress.egg-info/dependency_links.txt
-learning_with_progress.egg-info/top_level.txt
