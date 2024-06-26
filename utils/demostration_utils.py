@@ -30,3 +30,9 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
         trajectories.append(trajectory)
     return trajectories
 
+def load_data_to_h5py(dataset_path: str):
+    project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    dataset_path = os.path.join(project_path,"human-demo",dataset_path)
+    f = h5py.File(dataset_path,'r')
+    return f
+
