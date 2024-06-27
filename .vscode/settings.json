@@ -1,3 +1,8 @@
 {
-    "python.analysis.extraPaths": ["../robosuite","../robomimic","../tool-pkgs/imitation"]
+    "python.analysis.extraPaths": [
+        "../robosuite",
+        "../robomimic",
+        "../tool-pkgs/imitation"
+    ],
+    "ros.distro": "noetic"
 }

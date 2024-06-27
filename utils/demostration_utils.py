@@ -26,6 +26,11 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
         # actions need to be cut off the last element
         action = np.array(f["data/{}/actions".format(key)][:-1])
         dones = np.array(f["data/{}/dones".format(key)][-1])
+        done  = dones
+        dones = []
+        for i in range(len(action) - 2):
+            dones.append(0)
+        dones.append(int(done))
         trajectory = types.Trajectory(obs=obs, acts=action, terminal=dones, infos=None)
         trajectories.append(trajectory)
     return trajectories

@@ -43,6 +43,7 @@ def read_all_json(file_path:str = None):
     '''
     # get the absolute path
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    print(project_path)
     file_path = os.path.join(project_path,"progress_data",file_path)
     # read all json files in the folder
     data = dict()

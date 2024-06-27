@@ -4,7 +4,8 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.ppo import MlpPolicy
 
-from imitation.algorithms.adversarial.airl import AIRL
+# from imitation.algorithms.adversarial.airl import AIRL
+from airl import AIRL
 from imitation.data import rollout
 from imitation.data.wrappers import RolloutInfoWrapper
 from imitation.policies.serialize import load_policy
@@ -16,6 +17,7 @@ import os
 import h5py
 import json
 from robosuite.controllers import load_controller_config
+from utils import annotation_utils
 
 if __name__ == "__main__":
     project_path = os.path.dirname(os.path.abspath(__file__))
@@ -29,6 +31,9 @@ if __name__ == "__main__":
 
     controller_config = load_controller_config(default_controller="OSC_POSE")
     env_meta = json.loads(f["data"].attrs["env_args"])
+
+    annotations = annotation_utils.read_all_json("")
+    # print(annotations['demo_1'][2]['start_step'])
     SEED = 42
     make_env_kwargs = dict(
         robots="Panda",             # load a Sawyer robot and a Panda robot
@@ -86,11 +91,11 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    airl_trainer.train(2_000_00)  # Train for 2_000_000 steps to match expert.
-    envs.seed(SEED)
-    learner_rewards_after_training, _ = evaluate_policy(
-        learner, envs, 12, return_episode_rewards=True,
-    )
+    # airl_trainer.train(2_000_00)  # Train for 2_000_000 steps to match expert.
+    # envs.seed(SEED)
+    # learner_rewards_after_training, _ = evaluate_policy(
+    #     learner, envs, 12, return_episode_rewards=True,
+    # )
 
-    print("mean reward after training:", np.mean(learner_rewards_after_training))
-    print("mean reward before training:", np.mean(learner_rewards_before_training))
+    # print("mean reward after training:", np.mean(learner_rewards_after_training))
+    # print("mean reward before training:", np.mean(learner_rewards_before_training))
