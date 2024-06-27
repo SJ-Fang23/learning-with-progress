@@ -2,7 +2,7 @@
 import json
 import os
 
-def write_to_json(data:list[dict], 
+def write_to_json(data, 
                   file_path:str):
     '''
     Write data to json file
@@ -21,7 +21,7 @@ def write_to_json(data:list[dict],
         json.dump(data, f, indent=4)
 
 
-def read_from_json(file_path:str) -> list[dict]:
+def read_from_json(file_path:str):
     '''
     Read data from json file
     input: file_path: str, relative to progress_data folder

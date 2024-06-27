@@ -3,7 +3,9 @@ import h5py
 import os
 import json
 import robosuite as suite
-from envs.pickplace import*
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from envs.pickplace import *
 import numpy as np
 from robosuite.controllers import load_controller_config
 import argparse
@@ -60,6 +62,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         env.render()
 
         pause_indices = np.linspace(0, len(actions), collect_progress_times+2, dtype=int)[1:-1]
+        progress = []
         # replay demo
         for i in range(len(actions)):
             action = actions[i]
@@ -79,10 +82,13 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
                 # user input must be a float, otherwise ask user to input again
                 while not user_input.replace(".", "").isdigit():
                     user_input = input("Please input the progress data: ")
+                    progress.append(float(user_input))
                 
                 single_data = dict(
-                    step = i,
-                    progress_data = float(user_input)
+                    start_step = int(pause_indices[np.where(pause_indices == i)[0][0]-1] if np.where(pause_indices == i)[0][0]-1 >= 0 else 0),
+                    end_step = i,
+                    start_progress = progress[len(progress)-2] if len(progress) > 2 else 0,
+                    end_progress = float(user_input)
                 )
 
                 progress_data[key].append(single_data)
@@ -102,7 +108,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="can-pick/low_dim_v141.hdf5")
     parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[1])
-    parser.add_argument("--collect_progress_times", type=int, default=10)
+    parser.add_argument("--collect_progress_times", type=int, default=3)
     args = parser.parse_args()
     print(args.replay_demo_numbers)
     replay_trajectory_and_collect_progress(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)

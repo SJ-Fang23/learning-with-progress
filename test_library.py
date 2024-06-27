@@ -64,7 +64,7 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, env, 100, return_episode_rewards=True,
     )
-    airl_trainer.train(2_000_000)  # Train for 2_000_000 steps to match expert.
+    airl_trainer.train(5_000_00)  # Train for 2_000_000 steps to match expert.
     env.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, env, 100, return_episode_rewards=True,

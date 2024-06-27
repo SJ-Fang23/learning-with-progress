@@ -1,42 +1,20 @@
 [
     {
-        "step": 10,
-        "progress_data": 10.0
+        "start_step": 0,
+        "end_step": 29,
+        "start_progress": 0,
+        "end_progress": 50.0
     },
     {
-        "step": 21,
-        "progress_data": 15.0
+        "start_step": 29,
+        "end_step": 59,
+        "start_progress": 0,
+        "end_progress": 70.0
     },
     {
-        "step": 32,
-        "progress_data": 20.0
-    },
-    {
-        "step": 42,
-        "progress_data": 25.0
-    },
-    {
-        "step": 53,
-        "progress_data": 30.0
-    },
-    {
-        "step": 64,
-        "progress_data": 35.0
-    },
-    {
-        "step": 75,
-        "progress_data": 40.0
-    },
-    {
-        "step": 85,
-        "progress_data": 45.0
-    },
-    {
-        "step": 96,
-        "progress_data": 50.0
-    },
-    {
-        "step": 107,
-        "progress_data": 55.0
+        "start_step": 59,
+        "end_step": 88,
+        "start_progress": 0,
+        "end_progress": 90.0
     }
 ]
