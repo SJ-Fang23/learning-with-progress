@@ -2,6 +2,7 @@
 from typing import Optional
 
 import torch as th
+import torch
 from stable_baselines3.common import base_class, policies, vec_env
 from stable_baselines3.sac import policies as sac_policies
 
@@ -52,6 +53,7 @@ class AIRL(common.AdversarialTrainer):
                 attribute (present in `ActorCriticPolicy`), needed to compute
                 log-probability of actions.
         """
+        
         super().__init__(
             demonstrations=demonstrations,
             demo_batch_size=demo_batch_size,
@@ -65,7 +67,9 @@ class AIRL(common.AdversarialTrainer):
             raise TypeError(
                 "AIRL needs a stochastic policy to compute the discriminator output.",
             )
-        annotations = annotation_utils.read_all_json("")
+        self.demonstrations = demonstrations
+
+        self.annotations = annotation_utils.read_all_json("")
         # print(demonstrations[0].acts[annotations['demo_1'][2]['end_step']])
         # print("terminal:", demonstrations[0].terminal)
 
@@ -120,7 +124,14 @@ class AIRL(common.AdversarialTrainer):
             raise TypeError(
                 "Non-None `log_policy_act_prob` is required for this method.",
             )
+        
+
+
         reward_output_train = self._reward_net(state, action, next_state, done)
+        print("*************************************")
+        print("reward_output_train:", reward_output_train[20:30])
+        print("*************************************")
+
         return reward_output_train - log_policy_act_prob
 
     @property
@@ -135,3 +146,38 @@ class AIRL(common.AdversarialTrainer):
         while isinstance(reward_net, reward_nets.RewardNetWrapper):
             reward_net = reward_net.base
         return reward_net
+    
+    # def 
+
+        # # Slicing the arrays
+        # device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        # ann_states = self.demonstrations[0].obs[self.annotations['demo_1'][2]['start_step']:self.annotations['demo_1'][2]['end_step']]
+        # ann_actions = self.demonstrations[0].acts[self.annotations['demo_1'][2]['start_step']:self.annotations['demo_1'][2]['end_step']]
+        # ann_next_states = self.demonstrations[0].obs[self.annotations['demo_1'][2]['start_step']+1:self.annotations['demo_1'][2]['end_step']+1]
+        # ann_dones = self.demonstrations[0].terminal
+
+        # # Convert each element to a torch tensor
+        # ann_states = [torch.tensor(state, device=device, dtype=torch.float32) for state in ann_states]
+        # ann_actions = [torch.tensor(action, device=device, dtype=torch.float32) for action in ann_actions]
+        # ann_next_states = [torch.tensor(next_state, device=device, dtype=torch.float32) for next_state in ann_next_states]
+        # ann_dones = torch.tensor(ann_dones, device=device, dtype=torch.float32)
+
+
+        # reward_output_ann = self._reward_net(ann_states, ann_actions, ann_next_states, ann_dones)
+
+        # base_reward_net_output = self._reward_net.base(state, action, next_state, done)
+        # new_shaping_output = self._reward_net.potential(next_state).flatten()
+        # old_shaping_output = self._reward_net.potential(state).flatten()
+        # new_shaping_output = (1 - done.float()) * new_shaping_output
+
+
+        # Q_s = base_reward_net_output + new_shaping_output * self._reward_net.discount_factor
+        # V_s = old_shaping_output
+
+
+        # print(Q_s)
+        # print(V_s)
+
+        # print("*************************************")
+        # print("reward_output_ann:", reward_output_ann)
+        # print("*************************************")
