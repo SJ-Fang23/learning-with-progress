@@ -160,18 +160,36 @@ class AIRL(common.AdversarialTrainer):
                 ann_actions = self.demonstrations[num].acts[self.annotations[traj][i]['start_step']:self.annotations[traj][i]['end_step']]
                 ann_next_states = self.demonstrations[num].obs[self.annotations[traj][i]['start_step']+1:self.annotations[traj][i]['end_step']+1]
                 ann_dones = self.demonstrations[num].terminal
+                ann_states = [torch.tensor(state, device='cuda', dtype=torch.float32) for state in ann_states]
+                ann_actions = [torch.tensor(action, device='cuda', dtype=torch.float32) for action in ann_actions]
+                ann_next_states = [torch.tensor(next_state, device='cuda', dtype=torch.float32) for next_state in ann_next_states]
+                ann_dones = torch.tensor(ann_dones, device='cuda', dtype=torch.float32)
+
                 r_i = self._reward_net.base(ann_states, ann_actions, ann_next_states, ann_dones)
                 v_i = self._reward_net.potential(ann_states).flatten()
-                progress_i = self.annotations[traj][i]['end_progress'] - self.annotations[traj][i]['start_progress']
-                for j in range(i+1, len(self.annotations[traj])):
-                    ann_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
-                    ann_actions = self.demonstrations[num].acts[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
-                    ann_next_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']+1:self.annotations[traj][j]['end_step']+1]
-                    ann_dones = self.demonstrations[num].terminal
 
-                    r_j = self._reward_net.base(ann_states, ann_actions, ann_next_states, ann_dones)
-                    v_j = self._reward_net.potential(ann_states).flatten()
-                    progress_j = self.annotations[traj][j]['end_progress'] - self.annotations[traj][j]['start_progress']
+                # positive or negative rewards constraint loss
+                if self.annotations[traj][i]['start_progress'] <  self.annotations[traj][i]['end_progress']:
+                    progress_i = self.annotations[traj][i]['end_progress'] - self.annotations[traj][i]['start_progress']
+                    progress_i = progress_i / 100
+                    loss = torch.max(torch.tensor(0.0, device='cuda'), - r_i + torch.tensor(progress_i, device='cuda'))
+                    loss.backward()
+                    # start_r = self._reward_net.base(ann_states[0], ann_actions[0], ann_next_states[0], ann_dones[0])
+                    # end_r = self._reward_net.base(ann_states[-1], ann_actions[-1], ann_next_states[-1], ann_dones[-1])
+
+                    # loss_r = F.binary_cross_entropy_with_logits(start_r, end_r)
+
+
+                # progress_i = self.annotations[traj][i]['end_progress'] - self.annotations[traj][i]['start_progress']
+                # for j in range(i+1, len(self.annotations[traj])):
+                #     ann_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
+                #     ann_actions = self.demonstrations[num].acts[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
+                #     ann_next_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']+1:self.annotations[traj][j]['end_step']+1]
+                #     ann_dones = self.demonstrations[num].terminal
+
+                #     r_j = self._reward_net.base(ann_states, ann_actions, ann_next_states, ann_dones)
+                #     v_j = self._reward_net.potential(ann_states).flatten()
+                #     progress_j = self.annotations[traj][j]['end_progress'] - self.annotations[traj][j]['start_progress']
 
 
 
