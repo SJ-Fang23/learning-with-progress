@@ -10,6 +10,8 @@ from imitation.algorithms import base
 from imitation.algorithms.adversarial import common
 from imitation.rewards import reward_nets
 from utils import annotation_utils
+import numpy as np
+from torch.nn import functional as F
 
 STOCHASTIC_POLICIES = (sac_policies.SACPolicy, policies.ActorCriticPolicy)
 
@@ -147,7 +149,34 @@ class AIRL(common.AdversarialTrainer):
             reward_net = reward_net.base
         return reward_net
     
-    # def 
+    def sample(self, batch_size = 2):
+        for _ in range(batch_size):
+            traj = np.random.choice(self.annotations.keys())
+            num = traj.split("_")[1]
+            print(traj)
+            print(num)
+            for i in range(len(self.annotations[traj])):
+                ann_states = self.demonstrations[num].obs[self.annotations[traj][i]['start_step']:self.annotations[traj][i]['end_step']]
+                ann_actions = self.demonstrations[num].acts[self.annotations[traj][i]['start_step']:self.annotations[traj][i]['end_step']]
+                ann_next_states = self.demonstrations[num].obs[self.annotations[traj][i]['start_step']+1:self.annotations[traj][i]['end_step']+1]
+                ann_dones = self.demonstrations[num].terminal
+                r_i = self._reward_net.base(ann_states, ann_actions, ann_next_states, ann_dones)
+                v_i = self._reward_net.potential(ann_states).flatten()
+                progress_i = self.annotations[traj][i]['end_progress'] - self.annotations[traj][i]['start_progress']
+                for j in range(i+1, len(self.annotations[traj])):
+                    ann_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
+                    ann_actions = self.demonstrations[num].acts[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
+                    ann_next_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']+1:self.annotations[traj][j]['end_step']+1]
+                    ann_dones = self.demonstrations[num].terminal
+
+                    r_j = self._reward_net.base(ann_states, ann_actions, ann_next_states, ann_dones)
+                    v_j = self._reward_net.potential(ann_states).flatten()
+                    progress_j = self.annotations[traj][j]['end_progress'] - self.annotations[traj][j]['start_progress']
+
+
+
+                    
+
 
         # # Slicing the arrays
         # device = 'cuda' if torch.cuda.is_available() else 'cpu'
