@@ -48,6 +48,7 @@ if __name__ == "__main__":
         use_camera_obs=False,
         reward_shaping=True,
     )
+
     envs = make_vec_env_robosuite(
         "PickPlaceCan",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat"],
@@ -58,6 +59,7 @@ if __name__ == "__main__":
         env_make_kwargs=make_env_kwargs,
 
     )
+
     trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat"])
     print(type(trajs[0].obs))
     learner = PPO(
@@ -89,14 +91,14 @@ if __name__ == "__main__":
     )
 
     envs.seed(SEED)
-    # learner_rewards_before_training, _ = evaluate_policy(
-    #     learner, envs, 12, return_episode_rewards=True,
-    # )
+    learner_rewards_before_training, _ = evaluate_policy(
+        learner, envs, 12, return_episode_rewards=True,
+    )
     airl_trainer.train(2_00_000)  # Train for 2_000_000 steps to match expert.
     envs.seed(SEED)
-    # learner_rewards_after_training, _ = evaluate_policy(
-    #     learner, envs, 12, return_episode_rewards=True,
-    # )
+    learner_rewards_after_training, _ = evaluate_policy(
+        learner, envs, 12, return_episode_rewards=True,
+    )
 
-    # print("mean reward after training:", np.mean(learner_rewards_after_training))
-    # print("mean reward before training:", np.mean(learner_rewards_before_training))
+    print("mean reward after training:", np.mean(learner_rewards_after_training))
+    print("mean reward before training:", np.mean(learner_rewards_before_training))

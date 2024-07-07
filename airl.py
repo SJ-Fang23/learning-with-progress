@@ -163,6 +163,8 @@ class AIRL(common.AdversarialTrainer):
                 ann_actions = self.demonstrations[num].acts[self.annotations[traj][i]['start_step']:self.annotations[traj][i]['end_step']]
                 ann_next_states = self.demonstrations[num].obs[self.annotations[traj][i]['start_step']+1:self.annotations[traj][i]['end_step']+1]
                 ann_dones = self.demonstrations[num].terminal
+                if len(ann_states) != len(ann_actions) or len(ann_states) != len(ann_next_states):
+                    ann_states = ann_states[:-1]
 
                 ann_states = [torch.tensor(state, device='cuda', dtype=torch.float32) for state in ann_states]
                 ann_actions = [torch.tensor(action, device='cuda', dtype=torch.float32) for action in ann_actions]
@@ -171,6 +173,12 @@ class AIRL(common.AdversarialTrainer):
                 ann_states = torch.stack([torch.tensor(state, device='cuda', dtype=torch.float32) for state in ann_states])
                 ann_actions = torch.stack([torch.tensor(action, device='cuda', dtype=torch.float32) for action in ann_actions])
                 ann_next_states = torch.stack([torch.tensor(next_state, device='cuda', dtype=torch.float32) for next_state in ann_next_states])
+
+                # print("************************************")
+                # print(len(ann_states), len(ann_actions), len(ann_next_states))
+                # print("************************************")
+
+                
 
                 ann_dones = torch.tensor(ann_dones, device='cuda', dtype=torch.float32)
 

@@ -62,6 +62,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         env.render()
 
         pause_indices = np.linspace(0, len(actions), collect_progress_times+2, dtype=int)[1:-1]
+        pause_indices = np.append(pause_indices, len(actions)-1)
         progress = [0]
         # replay demo
         for i in range(len(actions)):
