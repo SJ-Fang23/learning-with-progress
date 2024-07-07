@@ -47,6 +47,7 @@ if __name__ == "__main__":
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
+        #render_gpu_device_id= 0
     )
 
     envs = make_vec_env_robosuite(
@@ -94,7 +95,7 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    airl_trainer.train(2_00_000)  # Train for 2_000_000 steps to match expert.
+    airl_trainer.train(2_000_000)  # Train for 2_000_000 steps to match expert.
     envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,

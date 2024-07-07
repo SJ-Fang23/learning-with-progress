@@ -9,12 +9,12 @@
         "start_step": 19,
         "end_step": 39,
         "start_progress": 20.0,
-        "end_progress": 30.0
+        "end_progress": 35.0
     },
     {
         "start_step": 39,
         "end_step": 59,
-        "start_progress": 30.0,
+        "start_progress": 35.0,
         "end_progress": 50.0
     },
     {
@@ -27,6 +27,12 @@
         "start_step": 78,
         "end_step": 98,
         "start_progress": 60.0,
-        "end_progress": 90.0
+        "end_progress": 80.0
+    },
+    {
+        "start_step": 98,
+        "end_step": 117,
+        "start_progress": 80.0,
+        "end_progress": 100.0
     }
 ]

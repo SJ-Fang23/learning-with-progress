@@ -4,6 +4,7 @@ import os
 import json
 import robosuite as suite
 import sys
+import time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from envs.pickplace import *
 import numpy as np
@@ -60,6 +61,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         env.sim.set_state_from_flattened(initial_state)
         env.sim.forward()
         env.render()
+        
 
         pause_indices = np.linspace(0, len(actions), collect_progress_times+2, dtype=int)[1:-1]
         pause_indices = np.append(pause_indices, len(actions)-1)
@@ -71,6 +73,8 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
             done = dones[i]
             env.step(action)
             env.render()
+            if i == 0:
+                time.sleep(1)
             # if done:
             #     break
             
@@ -109,7 +113,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="can-pick/low_dim_v141.hdf5")
-    parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[1,2,3,4,5,6,7,8,9,10])
+    parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[i for i in range(21, 40)])
     parser.add_argument("--collect_progress_times", type=int, default=5)
     args = parser.parse_args()
     print(args.replay_demo_numbers)

@@ -1,38 +1,38 @@
 [
     {
         "start_step": 0,
-        "end_step": 21,
+        "end_step": 18,
         "start_progress": 0,
         "end_progress": 20.0
     },
     {
-        "start_step": 21,
-        "end_step": 42,
+        "start_step": 18,
+        "end_step": 37,
         "start_progress": 20.0,
         "end_progress": 40.0
     },
     {
-        "start_step": 42,
-        "end_step": 63,
+        "start_step": 37,
+        "end_step": 56,
         "start_progress": 40.0,
         "end_progress": 55.0
     },
     {
-        "start_step": 63,
-        "end_step": 84,
+        "start_step": 56,
+        "end_step": 74,
         "start_progress": 55.0,
-        "end_progress": 60.0
-    },
-    {
-        "start_step": 84,
-        "end_step": 105,
-        "start_progress": 60.0,
         "end_progress": 70.0
     },
     {
-        "start_step": 105,
-        "end_step": 126,
+        "start_step": 74,
+        "end_step": 93,
         "start_progress": 70.0,
+        "end_progress": 85.0
+    },
+    {
+        "start_step": 93,
+        "end_step": 111,
+        "start_progress": 85.0,
         "end_progress": 100.0
     }
 ]

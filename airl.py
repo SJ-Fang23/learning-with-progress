@@ -128,7 +128,7 @@ class AIRL(common.AdversarialTrainer):
             )
         
 
-        self.reward_shaping()
+        #self.reward_shaping()
         reward_output_train = self._reward_net(state, action, next_state, done)
         print("reward_net device:", self._reward_net.device)
         print("base device:", self._reward_net.base.device)
