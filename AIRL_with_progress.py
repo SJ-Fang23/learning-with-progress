@@ -72,6 +72,7 @@ if __name__ == "__main__":
         n_epochs=5,
         seed=SEED,
     )
+    print("ppo device", learner.device)
     reward_net = BasicShapedRewardNet(
         observation_space=envs.observation_space,
         action_space=envs.action_space,
@@ -88,14 +89,14 @@ if __name__ == "__main__":
     )
 
     envs.seed(SEED)
-    learner_rewards_before_training, _ = evaluate_policy(
-        learner, envs, 12, return_episode_rewards=True,
-    )
-    airl_trainer.train(2_000_00)  # Train for 2_000_000 steps to match expert.
+    # learner_rewards_before_training, _ = evaluate_policy(
+    #     learner, envs, 12, return_episode_rewards=True,
+    # )
+    airl_trainer.train(2_00_000)  # Train for 2_000_000 steps to match expert.
     envs.seed(SEED)
-    learner_rewards_after_training, _ = evaluate_policy(
-        learner, envs, 12, return_episode_rewards=True,
-    )
+    # learner_rewards_after_training, _ = evaluate_policy(
+    #     learner, envs, 12, return_episode_rewards=True,
+    # )
 
     # print("mean reward after training:", np.mean(learner_rewards_after_training))
     # print("mean reward before training:", np.mean(learner_rewards_before_training))
