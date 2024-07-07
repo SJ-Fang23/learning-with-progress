@@ -1,0 +1,32 @@
+[
+    {
+        "start_step": 0,
+        "end_step": 16,
+        "start_progress": 0,
+        "end_progress": 100.0
+    },
+    {
+        "start_step": 16,
+        "end_step": 32,
+        "start_progress": 100.0,
+        "end_progress": 40.0
+    },
+    {
+        "start_step": 32,
+        "end_step": 49,
+        "start_progress": 40.0,
+        "end_progress": 50.0
+    },
+    {
+        "start_step": 49,
+        "end_step": 65,
+        "start_progress": 50.0,
+        "end_progress": 60.0
+    },
+    {
+        "start_step": 65,
+        "end_step": 81,
+        "start_progress": 60.0,
+        "end_progress": 80.0
+    }
+]

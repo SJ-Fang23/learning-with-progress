@@ -66,13 +66,12 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         # replay demo
         for i in range(len(actions)):
             action = actions[i]
-            print(i)
             # obs = obs[i]
             done = dones[i]
             env.step(action)
             env.render()
-            if done:
-                break
+            # if done:
+            #     break
             
             # pause and collect progress data
             if i in pause_indices:
@@ -82,21 +81,23 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
                 # user input must be a float, otherwise ask user to input again
                 while not user_input.replace(".", "").isdigit():
                     user_input = input("Please input the progress data: ")
-                    progress.append(float(user_input))
+                progress.append(float(user_input))
                 
                 single_data = dict(
                     start_step = int(pause_indices[np.where(pause_indices == i)[0][0]-1] if np.where(pause_indices == i)[0][0]-1 >= 0 else 0),
                     end_step = i,
-                    start_progress = progress[len(progress)-2] if len(progress) > 2 else 0,
+                    start_progress = progress[len(progress)-2] if len(progress) >= 2 else 0,
                     end_progress = float(user_input)
                 )
 
                 progress_data[key].append(single_data)
                 # render the environment
                 env.render()
+            if i == len(actions)-1:
+                break
     # write progress data to json file, each demo has a json file
-    for key in progress_data.keys():
-        write_to_json(progress_data[key], "{}.json".format(key))
+        for key in progress_data.keys():
+            write_to_json(progress_data[key], "{}.json".format(key))
     
     f.close()
 
@@ -107,8 +108,8 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="can-pick/low_dim_v141.hdf5")
-    parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[1])
-    parser.add_argument("--collect_progress_times", type=int, default=3)
+    parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[1,2,3,4,5,6,7,8,9,10])
+    parser.add_argument("--collect_progress_times", type=int, default=5)
     args = parser.parse_args()
     print(args.replay_demo_numbers)
     replay_trajectory_and_collect_progress(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)

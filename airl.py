@@ -149,7 +149,7 @@ class AIRL(common.AdversarialTrainer):
             reward_net = reward_net.base
         return reward_net
     
-    def sample(self, batch_size = 2):
+    def reward_shaping(self, batch_size = 2):
         for _ in range(batch_size):
             traj = np.random.choice(self.annotations.keys())
             num = traj.split("_")[1]
@@ -181,15 +181,20 @@ class AIRL(common.AdversarialTrainer):
 
 
                 # progress_i = self.annotations[traj][i]['end_progress'] - self.annotations[traj][i]['start_progress']
-                # for j in range(i+1, len(self.annotations[traj])):
-                #     ann_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
-                #     ann_actions = self.demonstrations[num].acts[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
-                #     ann_next_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']+1:self.annotations[traj][j]['end_step']+1]
-                #     ann_dones = self.demonstrations[num].terminal
+                
+                #slope loss
+                for j in range(i+1, len(self.annotations[traj])):
+                    ann_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
+                    ann_actions = self.demonstrations[num].acts[self.annotations[traj][j]['start_step']:self.annotations[traj][j]['end_step']]
+                    ann_next_states = self.demonstrations[num].obs[self.annotations[traj][j]['start_step']+1:self.annotations[traj][j]['end_step']+1]
+                    ann_dones = self.demonstrations[num].terminal
 
-                #     r_j = self._reward_net.base(ann_states, ann_actions, ann_next_states, ann_dones)
-                #     v_j = self._reward_net.potential(ann_states).flatten()
-                #     progress_j = self.annotations[traj][j]['end_progress'] - self.annotations[traj][j]['start_progress']
+                    r_j = self._reward_net.base(ann_states, ann_actions, ann_next_states, ann_dones)
+                    v_j = self._reward_net.potential(ann_states).flatten()
+                    progress_j = self.annotations[traj][j]['end_progress'] - self.annotations[traj][j]['start_progress']
+                    diff = progress_j - progress_i
+                    diff = diff / 100
+                    loss = torch.max(torch.tensor(0.0, device='cuda'), r_i - r_j + torch.tensor(diff, device='cuda'))
 
 
 
