@@ -12,28 +12,24 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
     f = h5py.File(dataset_path,'r')
     filter_key = "train"
     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+    demo_keys = sorted(demo_keys, key=lambda x: int(x.split('_')[1]))
     trajectories = []
+    index = []
     for key in demo_keys:
+        #print(key)
+        index.append(key)
         obs_dict = {obs_key: np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys}
         # print(obs_dict.keys())
         # print(obs_dict["robot0_eef_pos"])
         zipped = zip(*obs_dict.values()) 
         obs = [np.concatenate(elem, axis=0) for elem in zipped]
         obs = np.stack(obs, axis=0)
-        # print(obs)
-        # print(len(obs))
-        # print(obs[0].shape)
         # actions need to be cut off the last element
         action = np.array(f["data/{}/actions".format(key)][:-1])
         dones = np.array(f["data/{}/dones".format(key)][-1])
-        # done  = dones
-        # dones = []
-        # for i in range(len(action) - 2):
-        #     dones.append(0)
-        # dones.append(int(done))
         trajectory = types.Trajectory(obs=obs, acts=action, terminal=dones, infos=None)
         trajectories.append(trajectory)
-    return trajectories
+    return trajectories, index
 
 def load_data_to_h5py(dataset_path: str):
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

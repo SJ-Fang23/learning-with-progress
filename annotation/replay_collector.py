@@ -46,17 +46,20 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
     # print(demo_keys)
     # get demo keys to replay
+    print("replay_demo:",reply_demo_indicies)  
     replay_demo_keys = ["demo_{}".format(i) for i in reply_demo_indicies if "demo_{}".format(i) in demo_keys]
     # print(replay_demo_keys)
     # replay demo, pause given times and collect progress data
     progress_data = dict()
     for key in replay_demo_keys:
+        print(key)
         obs = np.array(f["data/{}/obs".format(key)])
         actions = np.array(f["data/{}/actions".format(key)])
+        print(actions)
         dones = np.array(f["data/{}/dones".format(key)])
-
         # set initial state
         initial_state = f["data/{}/states".format(key)][0]
+
         env.reset()
         env.sim.set_state_from_flattened(initial_state)
         env.sim.forward()
@@ -113,7 +116,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset_path", type=str, default="can-pick/low_dim_v141.hdf5")
-    parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[i for i in range(21, 40)])
+    parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[40])
     parser.add_argument("--collect_progress_times", type=int, default=5)
     args = parser.parse_args()
     print(args.replay_demo_numbers)

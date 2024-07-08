@@ -31,6 +31,7 @@ class AIRL(common.AdversarialTrainer):
         venv: vec_env.VecEnv,
         gen_algo: base_class.BaseAlgorithm,
         reward_net: reward_nets.RewardNet,
+        demo_index = None,
         **kwargs,
     ):
         """Builds an AIRL trainer.
@@ -71,9 +72,11 @@ class AIRL(common.AdversarialTrainer):
             )
         self.demonstrations = demonstrations
 
+
         self.annotations = annotation_utils.read_all_json("")
-        # print(demonstrations[0].acts[annotations['demo_1'][2]['end_step']])
-        # print("terminal:", demonstrations[0].terminal)
+        self.demo_index = demo_index
+        # num = self.demo_index.index('demo_40')
+        # print("actions:", self.demonstrations[num].acts)
 
     def logits_expert_is_high(
         self,
@@ -128,7 +131,7 @@ class AIRL(common.AdversarialTrainer):
             )
         
 
-        #self.reward_shaping()
+        self.reward_shaping()
         reward_output_train = self._reward_net(state, action, next_state, done)
         print("reward_net device:", self._reward_net.device)
         print("base device:", self._reward_net.base.device)
@@ -154,19 +157,23 @@ class AIRL(common.AdversarialTrainer):
             keys = list(self.annotations.keys())
  #           print(keys)
             traj = np.random.choice(keys)
-            num = traj.split("_")[1]
-            num = int(num)
-            # print(traj)
-            # print(num)
+            # find num based on traj, where the index[num]  = traj, self.demo_index is a list of all the traj names
+            num = self.demo_index.index(traj)
+            print(traj)
+            print(num)
             for i in range(len(self.annotations[traj])):
                 ann_states = self.demonstrations[num].obs[self.annotations[traj][i]['start_step']:self.annotations[traj][i]['end_step']]
                 ann_actions = self.demonstrations[num].acts[self.annotations[traj][i]['start_step']:self.annotations[traj][i]['end_step']]
                 ann_next_states = self.demonstrations[num].obs[self.annotations[traj][i]['start_step']+1:self.annotations[traj][i]['end_step']+1]
                 ann_dones = self.demonstrations[num].terminal
+                #sth is wrong with demo_16
+                print("start_step:", self.annotations[traj][i]['start_step'], "end_step:", self.annotations[traj][i]['end_step'])
+                print("ann_states len :", len(ann_states), "num:", num, "traj:", traj, "i:", i)
+                print("len of ann_states:", len(ann_states), "len of ann_actions:", len(ann_actions), "len of ann_next_states:", len(ann_next_states))
                 if len(ann_states) != len(ann_actions) or len(ann_states) != len(ann_next_states):
-                    ann_states = ann_states[:-1]
-
-                ann_states = [torch.tensor(state, device='cuda', dtype=torch.float32) for state in ann_states]
+                    ann_states = [torch.tensor(state, device='cuda', dtype=torch.float32) for state in ann_states[0:-1]]
+                else:
+                    ann_states = [torch.tensor(state, device='cuda', dtype=torch.float32) for state in ann_states]
                 ann_actions = [torch.tensor(action, device='cuda', dtype=torch.float32) for action in ann_actions]
                 ann_next_states = [torch.tensor(next_state, device='cuda', dtype=torch.float32) for next_state in ann_next_states]
 

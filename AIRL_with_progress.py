@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     )
 
-    trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat"])
+    trajs, index = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat"])
     print(type(trajs[0].obs))
     learner = PPO(
         env=envs,
@@ -89,6 +89,7 @@ if __name__ == "__main__":
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
+        demo_index=index,
     )
 
     envs.seed(SEED)
