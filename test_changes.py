@@ -76,7 +76,7 @@ if __name__ == "__main__":
         demonstrations=trajs,
         demo_batch_size=2048,
         gen_replay_buffer_capacity=512,
-        n_disc_updates_per_round=16,
+        n_disc_updates_per_round=64,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
