@@ -31,6 +31,7 @@ class AIRL(common.AdversarialTrainer):
         venv: vec_env.VecEnv,
         gen_algo: base_class.BaseAlgorithm,
         reward_net: reward_nets.RewardNet,
+        annotation_dict: dict,
         **kwargs,
     ):
         """Builds an AIRL trainer.
@@ -68,6 +69,9 @@ class AIRL(common.AdversarialTrainer):
             raise TypeError(
                 "AIRL needs a stochastic policy to compute the discriminator output.",
             )
+        
+        assert isinstance(annotation_dict, dict), "annotation_dict must be a dictionary"
+        self.annotation_dict = annotation_dict
 
     def logits_expert_is_high(
         self,
@@ -133,7 +137,7 @@ class AIRL(common.AdversarialTrainer):
         '''
         get progress from annotations and compute the progress shaping loss
         '''
-
+        
         pass
 
 

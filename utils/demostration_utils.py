@@ -30,6 +30,10 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
         trajectories.append(trajectory)
     return trajectories
 
+def load_dataset_and_annotations_simutanously(obs_keys:Iterable[str],
+                                              dataset_path:str = "human-demo/can-pick/low_dim_v141.hdf5",
+                                                annotation_path:str = None):
+
 def load_data_to_h5py(dataset_path: str):
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dataset_path = os.path.join(project_path,"human-demo",dataset_path)
