@@ -14,6 +14,9 @@ from imitation.algorithms.adversarial import common
 from imitation.algorithms.adversarial.common import compute_train_stats
 from imitation.rewards import reward_nets
 
+from imitation.data import types
+from copy import deepcopy
+
 STOCHASTIC_POLICIES = (sac_policies.SACPolicy, policies.ActorCriticPolicy)
 
 
@@ -31,26 +34,17 @@ class AIRL(common.AdversarialTrainer):
         venv: vec_env.VecEnv,
         gen_algo: base_class.BaseAlgorithm,
         reward_net: reward_nets.RewardNet,
-        annotation_dict: dict,
+        annotation_list: list[tuple[int, dict]],
+        shaping_batch_size: int = 16,
+        shaping_loss_weight: float = 1.0,
+        shaping_update_freq: int = 1,
+        shaping_lr: float = 1e-3,
         **kwargs,
     ):
         """Builds an AIRL trainer.
 
         Args:
-            demonstrations: Demonstrations from an expert (optional). Transitions
-                expressed directly as a `types.TransitionsMinimal` object, a sequence
-                of trajectories, or an iterable of transition batches (mappings from
-                keywords to arrays containing observations, etc).
-            demo_batch_size: The number of samples in each batch of expert data. The
-                discriminator batch size is twice this number because each discriminator
-                batch contains a generator sample for every expert sample.
-            venv: The vectorized environment to train in.
-            gen_algo: The generator RL algorithm that is trained to maximize
-                discriminator confusion. Environment and logger will be set to
-                `venv` and `custom_logger`.
-            reward_net: Reward network; used as part of AIRL discriminator.
-            **kwargs: Passed through to `AdversarialTrainer.__init__`.
-
+            annotation_list: list of annotation tuples: (dict(progress_data), int(corresponding demonstration index))
         Raises:
             TypeError: If `gen_algo.policy` does not have an `evaluate_actions`
                 attribute (present in `ActorCriticPolicy`), needed to compute
@@ -70,8 +64,15 @@ class AIRL(common.AdversarialTrainer):
                 "AIRL needs a stochastic policy to compute the discriminator output.",
             )
         
-        assert isinstance(annotation_dict, dict), "annotation_dict must be a dictionary"
-        self.annotation_dict = annotation_dict
+        assert isinstance(demonstrations, list[types.Trajectory]), "demonstrations must be a list of Trajectory"
+        assert isinstance(annotation_list, list), "annotation_dict must be a list"
+
+        self.demonstrations = deepcopy(demonstrations)
+        self.annotation_list = annotation_list
+        self.shaping_batch_size = shaping_batch_size
+        self.shaping_loss_weight = shaping_loss_weight
+        self.shaping_update_freq = shaping_update_freq
+        self.shaping_lr = shaping_lr
 
     def logits_expert_is_high(
         self,
@@ -137,9 +138,56 @@ class AIRL(common.AdversarialTrainer):
         '''
         get progress from annotations and compute the progress shaping loss
         '''
+        # randomly choose some demonstrations from annotation_list
+        # randomly generate a batch of indices
+        indices = th.randint(0, len(self.annotation_list), (self.shaping_batch_size,))
         
-        pass
+        # get corresponding annotations
+        annotations = [self.annotation_list[idx] for idx in indices]
 
+        # get the progress change from annotations
+        delta_progress = th.tensor([annotation[0]["start_progress"] - annotation[0]["end_progress"] for annotation in annotations])
+
+        # get corresponding states and actions
+        demostration_indicies = [(annotation[1], annotation[0]["start_step"], annotation[0]["end_step"]) for annotation in annotations]
+        states = th.tensor([self.demonstrations[demostration_index].obs[start_step:end_step] for demostration_index, start_step, end_step in demostration_indicies])
+        actions = th.tensor([self.demonstrations[demostration_index].acts[start_step:end_step] for demostration_index, start_step, end_step in demostration_indicies])
+        
+        next_states = th.tensor([self.demonstrations[demostration_index].obs[start_step+1:end_step+1] for demostration_index, start_step, end_step in demostration_indicies])
+        dones = th.tensor([self.demonstrations[demostration_index].terminal[end_step] for demostration_index, _, end_step in demostration_indicies])
+
+        # record corresponding index for each part of the batch
+        state_lengths = th.tensor(len(state) for state in states)
+        # add 0 to the beginning of the tensor
+        state_lengths = th.cat((th.tensor([0]), state_lengths))
+        # accumulate the lengths of the states
+        state_indicies = th.cumsum(state_lengths)
+        
+        # concatenate the states and actions
+        states = th.cat(states)
+        actions = th.cat(actions)
+        next_states = th.cat(next_states)
+        dones = th.cat(dones)
+
+        # get the reward output from the reward network
+        reward_output_train = self._reward_net.base(states, actions, next_states, dones)
+
+        # sum the reward output for each trajectory
+        reward_output_train = th.tensor([reward_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
+
+        # the reward sum should have same length as delta_progress
+        assert len(reward_output_train) == len(delta_progress), "reward_output_train and delta_progress should have same length"
+
+        # loss should be difference in the sign of delta_progress and reward_output_train
+        sign_agreement = (th.sign(delta_progress)) * (th.sign(reward_output_train))
+        loss = th.mean(th.relu(-sign_agreement))
+        return loss
+
+
+
+        
+
+    
 
     @property
     def reward_train(self) -> reward_nets.RewardNet:
