@@ -4,7 +4,8 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.ppo import MlpPolicy
 
-from imitation.algorithms.adversarial.airl import AIRL
+# from imitation.algorithms.adversarial.airl import AIRL
+from IRL_lib_mod.airl import AIRL
 from imitation.data import rollout
 from imitation.data.wrappers import RolloutInfoWrapper
 from imitation.policies.serialize import load_policy
@@ -16,9 +17,11 @@ import os
 import h5py
 import json
 from robosuite.controllers import load_controller_config
+from utils.demostration_utils import load_dataset_and_annotations_simutanously
+from utils.annotation_utils import read_all_json
 
 if __name__ == "__main__":
-    project_path = os.path.dirname(os.path.abspath(__file__))
+    project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
     print(dataset_path)
     f = h5py.File(dataset_path,'r')
@@ -47,14 +50,20 @@ if __name__ == "__main__":
         "PickPlaceCan",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat"],
         rng=np.random.default_rng(SEED),
-        n_envs=16,
+        n_envs=8,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
 
     )
+
+    annotation_dict = read_all_json("progress_data")
+
     trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat"])
-    print(type(trajs[0].obs))
+    trajs_for_shaping, annotation_list = load_dataset_and_annotations_simutanously(["object","robot0_eef_pos", "robot0_eef_quat"],
+                                                                       annotation_dict=annotation_dict,
+                                                                       dataset_path=dataset_path)
+                                                                       
     learner = PPO(
         env=envs,
         policy=MlpPolicy,
@@ -80,8 +89,13 @@ if __name__ == "__main__":
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
+        annotation_list=annotation_list,
+        demostrations_for_shaping=trajs_for_shaping,
     )
 
+    # loss = airl_trainer.progress_shaping_loss()
+    # print(loss)
+    # loss.backward()
     envs.seed(SEED)
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
