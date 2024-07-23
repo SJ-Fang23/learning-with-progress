@@ -39,9 +39,10 @@ def load_dataset_and_annotations_simutanously(obs_keys:Iterable[str],
     f = h5py.File(dataset_path,'r')
     filter_key = "train"
     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+    annotation_keys = list(annotation_dict.keys())
     trajectories = []
     annotation_list = []
-    for key in demo_keys:
+    for key in annotation_keys:
 
         # load obs
         obs_dict = {obs_key: np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys}
@@ -61,7 +62,7 @@ def load_dataset_and_annotations_simutanously(obs_keys:Iterable[str],
         annotation = annotation_dict[key]
         # zip every elemet with corresponding demostration index (number of corresponding trajectory)
         annotation = [(elem, len(trajectories) - 1) for elem in annotation]
-        annotation_list.append(annotation)
+        annotation_list.extend(annotation)
     return trajectories, annotation_list
 
 

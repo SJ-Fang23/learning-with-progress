@@ -16,6 +16,7 @@ from imitation.rewards import reward_nets
 
 from imitation.data import types
 from copy import deepcopy
+import numpy as np
 
 STOCHASTIC_POLICIES = (sac_policies.SACPolicy, policies.ActorCriticPolicy)
 
@@ -35,6 +36,7 @@ class AIRL(common.AdversarialTrainer):
         gen_algo: base_class.BaseAlgorithm,
         reward_net: reward_nets.RewardNet,
         annotation_list: list[tuple[int, dict]],
+        demostrations_for_shaping: list[types.Trajectory],
         shaping_batch_size: int = 16,
         shaping_loss_weight: float = 1.0,
         shaping_update_freq: int = 1,
@@ -64,10 +66,12 @@ class AIRL(common.AdversarialTrainer):
                 "AIRL needs a stochastic policy to compute the discriminator output.",
             )
         
-        assert isinstance(demonstrations, list[types.Trajectory]), "demonstrations must be a list of Trajectory"
+        assert isinstance(demostrations_for_shaping, list), "demonstrations_for_shaping must be a list of Trajectory"
+        assert isinstance(demostrations_for_shaping[0], types.Trajectory), "demonstrations_for_shaping must be a list of Trajectory"
         assert isinstance(annotation_list, list), "annotation_dict must be a list"
 
         self.demonstrations = deepcopy(demonstrations)
+        self.demonstrations_for_shaping = deepcopy(demostrations_for_shaping)
         self.annotation_list = annotation_list
         self.shaping_batch_size = shaping_batch_size
         self.shaping_loss_weight = shaping_loss_weight
@@ -128,19 +132,14 @@ class AIRL(common.AdversarialTrainer):
         reward_output_train = self._reward_net(state, action, next_state, done)
         return reward_output_train - log_policy_act_prob
 
-    def progress_shaping_loss(self,
-        state: th.Tensor,
-        action: th.Tensor,
-        next_state: th.Tensor,
-        done: th.Tensor,
-        log_policy_act_prob: Optional[th.Tensor] = None,) -> th.Tensor:
+    def progress_shaping_loss(self) -> th.Tensor:
 
         '''
         get progress from annotations and compute the progress shaping loss
         '''
         # randomly choose some demonstrations from annotation_list
         # randomly generate a batch of indices
-        indices = th.randint(0, len(self.annotation_list), (self.shaping_batch_size,))
+        indices = np.random.choice(len(self.annotation_list), self.shaping_batch_size , replace=False)
         
         # get corresponding annotations
         annotations = [self.annotation_list[idx] for idx in indices]
@@ -150,44 +149,46 @@ class AIRL(common.AdversarialTrainer):
 
         # get corresponding states and actions
         demostration_indicies = [(annotation[1], annotation[0]["start_step"], annotation[0]["end_step"]) for annotation in annotations]
-        states = th.tensor([self.demonstrations[demostration_index].obs[start_step:end_step] for demostration_index, start_step, end_step in demostration_indicies])
-        actions = th.tensor([self.demonstrations[demostration_index].acts[start_step:end_step] for demostration_index, start_step, end_step in demostration_indicies])
+        states = [th.tensor(self.demonstrations_for_shaping[demostration_index].obs[start_step:end_step], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
+        actions = [th.tensor(self.demonstrations_for_shaping[demostration_index].acts[start_step:end_step], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
         
-        next_states = th.tensor([self.demonstrations[demostration_index].obs[start_step+1:end_step+1] for demostration_index, start_step, end_step in demostration_indicies])
-        dones = th.tensor([self.demonstrations[demostration_index].terminal[end_step] for demostration_index, _, end_step in demostration_indicies])
+        next_states = [th.tensor(self.demonstrations_for_shaping[demostration_index].obs[start_step+1:end_step+1], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
+        dones = [int(self.demonstrations_for_shaping[demostration_index].terminal) for demostration_index, _, end_step in demostration_indicies]
 
         # record corresponding index for each part of the batch
-        state_lengths = th.tensor(len(state) for state in states)
+        state_lengths = th.tensor([len(state) for state in states])
         # add 0 to the beginning of the tensor
         state_lengths = th.cat((th.tensor([0]), state_lengths))
+
         # accumulate the lengths of the states
-        state_indicies = th.cumsum(state_lengths)
+        state_indicies = th.cumsum(state_lengths, dim=0)
         
         # concatenate the states and actions
         states = th.cat(states)
         actions = th.cat(actions)
         next_states = th.cat(next_states)
-        dones = th.cat(dones)
+        dones = th.tensor(dones, dtype=th.float32)
+
+        # to device
+        states = states.to(self.gen_algo.device)
+        actions = actions.to(self.gen_algo.device)
+        next_states = next_states.to(self.gen_algo.device)
+        dones = dones.to(self.gen_algo.device)
 
         # get the reward output from the reward network
         reward_output_train = self._reward_net.base(states, actions, next_states, dones)
 
         # sum the reward output for each trajectory
-        reward_output_train = th.tensor([reward_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
-
+        reward_output_train = th.stack([reward_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
+        
         # the reward sum should have same length as delta_progress
         assert len(reward_output_train) == len(delta_progress), "reward_output_train and delta_progress should have same length"
 
         # loss should be difference in the sign of delta_progress and reward_output_train
-        sign_agreement = (th.sign(delta_progress)) * (th.sign(reward_output_train))
+        sign_agreement = (th.sign(delta_progress).to(self.gen_algo.device)) * (th.sign(reward_output_train))
         loss = th.mean(th.relu(-sign_agreement))
         return loss
 
-
-
-        
-
-    
 
     @property
     def reward_train(self) -> reward_nets.RewardNet:
@@ -249,6 +250,7 @@ class AIRL(common.AdversarialTrainer):
                 gen_samples=gen_samples,
                 expert_samples=expert_samples,
             )
+
             for batch in batch_iter:
                 disc_logits = self.logits_expert_is_high(
                     batch["state"],
@@ -271,6 +273,15 @@ class AIRL(common.AdversarialTrainer):
             # do gradient step
             self._disc_opt.step()
             self._disc_step += 1
+
+            # reward shaping loss
+            if self._disc_step % self.shaping_update_freq == 0:
+                self._disc_opt.zero_grad()
+                shaping_loss = self.progress_shaping_loss()
+                print(shaping_loss)
+                shaping_loss *= self.shaping_loss_weight
+                shaping_loss.backward()
+                self._disc_opt.step()
 
             # compute/write stats and TensorBoard data
             with th.no_grad():
