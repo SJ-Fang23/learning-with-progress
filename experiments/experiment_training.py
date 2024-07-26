@@ -19,10 +19,16 @@ import json
 from robosuite.controllers import load_controller_config
 from utils.demostration_utils import load_dataset_and_annotations_simutanously
 from utils.annotation_utils import read_all_json
+import argparse
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--exp_name', type=str, default="default_experiment")
+    
+    args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
+    log_dir = os.path.join(project_path,f"logs/{args.exp_name}")
     print(dataset_path)
     f = h5py.File(dataset_path,'r')
 
@@ -63,6 +69,9 @@ if __name__ == "__main__":
     trajs_for_shaping, annotation_list = load_dataset_and_annotations_simutanously(["object","robot0_eef_pos", "robot0_eef_quat"],
                                                                        annotation_dict=annotation_dict,
                                                                        dataset_path=dataset_path)
+    # type of reward shaping to use
+    # change this to enable or disable reward shaping
+    shape_reward = []
                                                                        
     learner = PPO(
         env=envs,
@@ -89,8 +98,12 @@ if __name__ == "__main__":
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
+        shape_reward = shape_reward,
         annotation_list=annotation_list,
         demostrations_for_shaping=trajs_for_shaping,
+        log_dir = log_dir,
+        init_tensorboard = True,
+        init_tensorboard_graph = True
     )
 
     # loss = airl_trainer.progress_shaping_loss()
@@ -100,7 +113,7 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    airl_trainer.train(2_000_000)  # Train for 2_000_000 steps to match expert.
+    airl_trainer.train(350_000)  # Train for 2_000_000 steps to match expert.
     envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,

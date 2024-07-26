@@ -37,6 +37,7 @@ class AIRL(common.AdversarialTrainer):
         reward_net: reward_nets.RewardNet,
         annotation_list: list[tuple[int, dict]],
         demostrations_for_shaping: list[types.Trajectory],
+        shape_reward = [],
         shaping_batch_size: int = 16,
         shaping_loss_weight: float = 1.0,
         shaping_update_freq: int = 1,
@@ -47,6 +48,7 @@ class AIRL(common.AdversarialTrainer):
 
         Args:
             annotation_list: list of annotation tuples: (dict(progress_data), int(corresponding demonstration index))
+            shape_reward: a list of reward shapings to use, no reward shaping if empty, can contain: ["progress_sign_loss"]
         Raises:
             TypeError: If `gen_algo.policy` does not have an `evaluate_actions`
                 attribute (present in `ActorCriticPolicy`), needed to compute
@@ -77,6 +79,7 @@ class AIRL(common.AdversarialTrainer):
         self.shaping_loss_weight = shaping_loss_weight
         self.shaping_update_freq = shaping_update_freq
         self.shaping_lr = shaping_lr
+        self.shape_reward = shape_reward
 
     def logits_expert_is_high(
         self,
@@ -275,13 +278,14 @@ class AIRL(common.AdversarialTrainer):
             self._disc_step += 1
 
             # reward shaping loss
-            if self._disc_step % self.shaping_update_freq == 0:
-                self._disc_opt.zero_grad()
-                shaping_loss = self.progress_shaping_loss()
-                print(shaping_loss)
-                shaping_loss *= self.shaping_loss_weight
-                shaping_loss.backward()
-                self._disc_opt.step()
+            if len(self.shape_reward) > 0:
+                if "progress_sign_loss" in self.shape_reward and self._disc_step % self.shaping_update_freq == 0:
+                    self._disc_opt.zero_grad()
+                    shaping_loss = self.progress_shaping_loss()
+                    print(shaping_loss)
+                    shaping_loss *= self.shaping_loss_weight
+                    shaping_loss.backward()
+                    self._disc_opt.step()
 
             # compute/write stats and TensorBoard data
             with th.no_grad():
