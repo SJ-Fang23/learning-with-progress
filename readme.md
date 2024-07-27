@@ -1,3 +1,7 @@
+# Dataset
+Please get dataset from this link and put in human-demo/can-pick:
+https://drive.google.com/drive/folders/1upTXzwI3AsTnKlqR_mz6qz_1J0boQ9I3?usp=sharing
+
 # Training
 
 To run the training, run 
