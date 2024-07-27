@@ -19,6 +19,7 @@ import json
 from robosuite.controllers import load_controller_config
 from utils.demostration_utils import load_dataset_and_annotations_simutanously
 from utils.annotation_utils import read_all_json
+from imitation.util import logger as imit_logger
 import argparse
 
 if __name__ == "__main__":
@@ -71,7 +72,7 @@ if __name__ == "__main__":
                                                                        dataset_path=dataset_path)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = []
+    shape_reward = ["progress_sign_loss"]
                                                                        
     learner = PPO(
         env=envs,
@@ -90,6 +91,8 @@ if __name__ == "__main__":
         action_space=envs.action_space,
         normalize_input_layer=RunningNorm,
     )
+    # logger that write tensroborad to logs dir
+    logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
     airl_trainer = AIRL(
         demonstrations=trajs,
         demo_batch_size=2048,
@@ -101,9 +104,10 @@ if __name__ == "__main__":
         shape_reward = shape_reward,
         annotation_list=annotation_list,
         demostrations_for_shaping=trajs_for_shaping,
-        log_dir = log_dir,
-        init_tensorboard = True,
-        init_tensorboard_graph = True
+        custom_logger = logger,
+        # log_dir = log_dir,
+        # init_tensorboard = True,
+        # init_tensorboard_graph = True
     )
 
     # loss = airl_trainer.progress_shaping_loss()
