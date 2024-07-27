@@ -27,4 +27,4 @@ line 74 in
 experiments/experiment_training.py
 ```
 
-currenly there are: "progress_sign_loss"
+currenly supports: "progress_sign_loss"
