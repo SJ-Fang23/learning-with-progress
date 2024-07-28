@@ -167,7 +167,7 @@ def replay_trajectory_and_collect_preference(dataset_path:str,
         worse_demos=worse_demos
     )
     # replay demos according to key pairs, collect preference
-    preference_data = dict()
+    
 
     replay_demo_key_pairs = [("demo_1","demo_200"), ("demo_2", "demo_199")]
 
@@ -176,6 +176,8 @@ def replay_trajectory_and_collect_preference(dataset_path:str,
     cv2.namedWindow('Window 2')
 
     for (key_1, key_2) in replay_demo_key_pairs:
+        preferences = []
+
         print(f"replaying: {key_1} and {key_2}")
         obs_1 = np.array(f["data/{}/obs".format(key_1)])
         actions_1 = np.array(f["data/{}/actions".format(key_1)])
@@ -213,7 +215,8 @@ def replay_trajectory_and_collect_preference(dataset_path:str,
             for i_1 in range(pause_indices_1[sub_traj_idx], pause_indices_1[sub_traj_idx+1]):
                 action = actions_1[i_1]
                 obs,_,_,_ = env_1.step(action)
-                imgs_1.append(obs["agentview_image"])
+                # filp the image
+                imgs_1.append(cv2.flip(obs["agentview_image"], 0))
                 # env_1.render()
                 # pause on first frame
 
@@ -221,7 +224,7 @@ def replay_trajectory_and_collect_preference(dataset_path:str,
             for i_2 in range(pause_indices_2[sub_traj_idx], pause_indices_2[sub_traj_idx+1]):
                 action = actions_2[i_2]
                 obs,_,_,_ = env_2.step(action)
-                imgs_2.append(obs["agentview_image"])
+                imgs_2.append(cv2.flip(obs["agentview_image"], 0))
                 # env_2.render()
                 # pause on first frame
             
@@ -230,7 +233,21 @@ def replay_trajectory_and_collect_preference(dataset_path:str,
             display_images(imgs_2, "Window 2")
 
 
-            user_input = input("Please input the preference data: ")
+            user_preference = int(input("Please input the preference data, 1 or 2:"))
+            preference_data = dict(
+                start_frame_1 = int(pause_indices_1[sub_traj_idx]),
+                end_frame_1 = int(pause_indices_1[sub_traj_idx+1]),
+                start_frame_2 = int(pause_indices_2[sub_traj_idx]),
+                end_frame_2 = int(pause_indices_2[sub_traj_idx+1]),
+                demo_1 = key_1,
+                demo_2 = key_2,
+                preference = user_preference
+            )
+            preferences.append(preference_data)
+
+        # write preference data to json file
+        write_to_json(preferences, "preference_{}_{}.json".format(key_1, key_2), data_folder="preference_data")
+        print("replay finished for pair: {} and {}".format(key_1, key_2))
     
     # write progress data to json file, each demo has a json file
     #     for key in preference_data.keys():
@@ -248,9 +265,14 @@ def generate_demo_pair_for_preference(demo_choose_method,
                                       worse_demos):
     pass
 
-def display_images(img_list, window_name, fps=24):
+def display_images(img_list, window_name, fps=20):
     frame_time = int(1000 / fps)  # Calculate time to wait for each image in milliseconds
-    for img in img_list:
+    
+    for id, img in enumerate(img_list):
+        # ask user to press any key to continue if play the first frame
+        if id == 0:
+            cv2.imshow(window_name, cv2.resize(img, (256,256)))
+            input("Press any key to start playing the video")
         if img is not None:
             resized_img = cv2.resize(img, (256,256))
             cv2.imshow(window_name, resized_img)

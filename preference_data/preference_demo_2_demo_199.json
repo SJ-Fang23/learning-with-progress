@@ -1,0 +1,92 @@
+[
+    {
+        "start_frame_1": 0,
+        "end_frame_1": 11,
+        "start_frame_2": 0,
+        "end_frame_2": 13,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 1
+    },
+    {
+        "start_frame_1": 11,
+        "end_frame_1": 22,
+        "start_frame_2": 13,
+        "end_frame_2": 26,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 2
+    },
+    {
+        "start_frame_1": 22,
+        "end_frame_1": 33,
+        "start_frame_2": 26,
+        "end_frame_2": 39,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 2
+    },
+    {
+        "start_frame_1": 33,
+        "end_frame_1": 45,
+        "start_frame_2": 39,
+        "end_frame_2": 53,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 2
+    },
+    {
+        "start_frame_1": 45,
+        "end_frame_1": 56,
+        "start_frame_2": 53,
+        "end_frame_2": 66,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 1
+    },
+    {
+        "start_frame_1": 56,
+        "end_frame_1": 67,
+        "start_frame_2": 66,
+        "end_frame_2": 79,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 1
+    },
+    {
+        "start_frame_1": 67,
+        "end_frame_1": 79,
+        "start_frame_2": 79,
+        "end_frame_2": 93,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 1
+    },
+    {
+        "start_frame_1": 79,
+        "end_frame_1": 90,
+        "start_frame_2": 93,
+        "end_frame_2": 106,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 2
+    },
+    {
+        "start_frame_1": 90,
+        "end_frame_1": 101,
+        "start_frame_2": 106,
+        "end_frame_2": 119,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 2
+    },
+    {
+        "start_frame_1": 101,
+        "end_frame_1": 113,
+        "start_frame_2": 119,
+        "end_frame_2": 133,
+        "demo_1": "demo_2",
+        "demo_2": "demo_199",
+        "preference": 2
+    }
+]

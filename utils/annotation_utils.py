@@ -3,7 +3,8 @@ import json
 import os
 
 def write_to_json(data:list[dict], 
-                  file_path:str):
+                  file_path:str, 
+                  data_folder:str = "progress_data") -> None:
     '''
     Write data to json file
     input: data: list of dict
@@ -11,7 +12,7 @@ def write_to_json(data:list[dict],
     '''
     # get the absolute path
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    file_path = os.path.join(project_path,"progress_data",file_path)
+    file_path = os.path.join(project_path,f"{data_folder}",file_path)
 
     # if the file does not exist, create it
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
