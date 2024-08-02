@@ -187,9 +187,37 @@ class AIRL(common.AdversarialTrainer):
         # the reward sum should have same length as delta_progress
         assert len(reward_output_train) == len(delta_progress), "reward_output_train and delta_progress should have same length"
 
+        # to device
+        delta_progress = delta_progress.to(self.gen_algo.device)
+        reward_output_train = reward_output_train.to(self.gen_algo.device)
+
+        loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
+        loss_scale = self.delta_progress_scale_loss(delta_progress, reward_output_train)
+
+        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale}
+        
+
+    
+    def progress_sign_loss(self, 
+                           delta_progress: th.tensor, 
+                           reward_output_train: th.tensor) -> th.tensor:
         # loss should be difference in the sign of delta_progress and reward_output_train
         sign_agreement = (th.sign(delta_progress).to(self.gen_algo.device)) * (th.sign(reward_output_train))
         loss = th.mean(th.relu(-sign_agreement))
+        return loss
+    
+    def delta_progress_scale_loss(self, 
+                                delta_progress: th.tensor, 
+                                reward_output_train: th.tensor)-> th.tensor:
+        # loss should make the subtrajectory with higher delta_progress have higher reward_output_train
+        
+        # compute pairwise differences
+        delta_progress_diff = delta_progress.unsqueeze(1) - delta_progress.unsqueeze(0)
+        reward_output_train_diff = reward_output_train.unsqueeze(1) - reward_output_train.unsqueeze(0)
+
+        # we want reward_output_train_diff to be larger when delta_progress_diff is larger
+        # idea is that if delta_progress_diff > 0, then reward_output_train_diff > 0
+        loss = th.mean(th.relu(-th.sign(delta_progress_diff * reward_output_train_diff)))
         return loss
 
 
@@ -278,14 +306,27 @@ class AIRL(common.AdversarialTrainer):
             self._disc_step += 1
 
             # reward shaping loss
-            if len(self.shape_reward) > 0:
-                if "progress_sign_loss" in self.shape_reward and self._disc_step % self.shaping_update_freq == 0:
-                    self._disc_opt.zero_grad()
-                    shaping_loss = self.progress_shaping_loss()
-                    print(shaping_loss)
-                    shaping_loss *= self.shaping_loss_weight
-                    shaping_loss.backward()
-                    self._disc_opt.step()
+            if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
+                self._disc_opt.zero_grad()
+                shaping_losses = self.progress_shaping_loss()
+                # get the losses in self.shape_reward list using keys, sum them
+                shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
+                print(shaping_loss)
+                shaping_loss *= self.shaping_loss_weight
+                shaping_loss.backward()
+                self._disc_opt.step()
+
+                # relase unused loss
+                # del shaping_losses
+
+
+                # if "progress_sign_loss" in self.shape_reward and self._disc_step % self.shaping_update_freq == 0:
+                #     self._disc_opt.zero_grad()
+                #     shaping_loss = self.progress_shaping_loss()
+                #     print(shaping_loss)
+                #     shaping_loss *= self.shaping_loss_weight
+                #     shaping_loss.backward()
+                #     self._disc_opt.step()
 
             # compute/write stats and TensorBoard data
             with th.no_grad():

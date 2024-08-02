@@ -19,13 +19,18 @@ ENV_META_EXCLUDE = ["env_version", "type"]
 def replay_trajectory_and_collect_progress(dataset_path:str,
                       reply_demo_indicies:int,
                       collect_progress_times:int, 
+                      replay_demo_nums:int,
+                    demo_choose_method = "diff_quality_random_play",
                       **env_kwargs):
     '''
     replay trajectory from dataset and collect progress data from user
     write progress data to json file
     input: dataset_path: str, relative to human_demo folder
-              reply_demo_numbers: int, number of demo to replay
+              reply_demo_indicies: int, index of demo to replay (only for ph dataset)
               collect_progress_times: int, number of times to collect progress data
+              replay_demo_nums: int, number of demos to replay (only for mh dataset)
+                demo_choose_method: str, method to choose demos to replay (only for mh dataset)
+
      '''
     # load dataset
     f:h5py.File = load_data_to_h5py(dataset_path)
@@ -42,21 +47,32 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         **env_kwargs
     )
 
-    # get demo keys
-    filter_key = "train"
-    demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
-    # print(demo_keys)
-    # get demo keys to replay
-    print("replay_demo:",reply_demo_indicies)  
-    replay_demo_keys = ["demo_{}".format(i) for i in reply_demo_indicies if "demo_{}".format(i) in demo_keys]
-    # print(replay_demo_keys)
+    # check if dataset is mh by checking if mh is in the file name
+    is_mh = "mh" in dataset_path
+    if is_mh:
+        # get demo keys with different quality
+        replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
+        # set json data folder
+        data_folder = "progress_data_mh"
+    else:
+        # get demo keys
+        filter_key = "train"
+        demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+        # print(demo_keys)
+        # get demo keys to replay
+        print("replay_demo:",reply_demo_indicies)  
+        replay_demo_keys = ["demo_{}".format(i) for i in reply_demo_indicies if "demo_{}".format(i) in demo_keys]
+        # print(replay_demo_keys)
+        # set json data folder
+        data_folder = "progress_data_ph"
+
     # replay demo, pause given times and collect progress data
     progress_data = dict()
     for key in replay_demo_keys:
-        print(key)
+        print("replaying {}: ", key)
         obs = np.array(f["data/{}/obs".format(key)])
         actions = np.array(f["data/{}/actions".format(key)])
-        print(actions)
+        # print(actions)
         dones = np.array(f["data/{}/dones".format(key)])
         # set initial state
         initial_state = f["data/{}/states".format(key)][0]
@@ -106,9 +122,65 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
                 break
     # write progress data to json file, each demo has a json file
         for key in progress_data.keys():
-            write_to_json(progress_data[key], "{}.json".format(key))
+            write_to_json(progress_data[key], "{}.json".format(key), data_folder=data_folder)
     
     f.close()
+
+
+def generate_replay_keys_for_progress(dataset_file,
+                                      replay_demo_nums = 30,
+                                      demo_choose_method = "diff_quality_random_play",):
+    
+    f:h5py.File = load_data_to_h5py(dataset_file)
+    # get demo names
+    better_demo_key = "better"
+    okay_demo_key = "okay"
+    worse_demo_key = "worse"
+
+    better_demos = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(better_demo_key)][:])]
+    okay_demos = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(okay_demo_key)][:])]
+    worse_demos = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(worse_demo_key)][:])]
+
+    if demo_choose_method == "diff_quality_random_play":
+        # select same amount demos of different quality and play them randomly
+        replay_demo_keys = []
+        replay_demo_nums_per_quality = replay_demo_nums // 3
+        replay_demo_keys.extend(np.random.choice(better_demos, replay_demo_nums_per_quality, replace=False))
+        replay_demo_keys.extend(np.random.choice(okay_demos, replay_demo_nums_per_quality, replace=False))
+        replay_demo_keys.extend(np.random.choice(worse_demos, replay_demo_nums_per_quality, replace=False))
+
+        # shuffle the replay_demo_keys
+        np.random.shuffle(replay_demo_keys)
+        return replay_demo_keys
+    elif demo_choose_method == "diff_quality_sequential_play":
+        # select same amount demos of different quality and play them sequentially in groups
+        replay_demo_keys = []
+        replay_demo_nums_per_quality = replay_demo_nums // 3
+        better_demo_keys = better_demos[:replay_demo_nums_per_quality]
+        okay_demo_keys = okay_demos[:replay_demo_nums_per_quality]
+        worse_demo_keys = worse_demos[:replay_demo_nums_per_quality]
+        # the group is one better, one okay, one worse
+        for i in range(replay_demo_nums_per_quality):
+            replay_demo_keys.append(better_demo_keys[i])
+            replay_demo_keys.append(okay_demo_keys[i])
+            replay_demo_keys.append(worse_demo_keys[i])
+        return replay_demo_keys
+    elif demo_choose_method == "diff_quality_group_play":
+        # select same amount demos of different quality and play them randomly in groups
+        replay_demo_keys = []
+        replay_demo_nums_per_quality = replay_demo_nums // 3
+        better_demo_keys = np.random.choice(better_demos, replay_demo_nums_per_quality, replace=False)
+        okay_demo_keys = np.random.choice(okay_demos, replay_demo_nums_per_quality, replace=False)
+        worse_demo_keys = np.random.choice(worse_demos, replay_demo_nums_per_quality, replace=False)
+
+        # the group is one better, one okay, one worse, but the order is random
+        for i in range(replay_demo_nums_per_quality):
+            group = [better_demo_keys[i], okay_demo_keys[i], worse_demo_keys[i]]
+            np.random.shuffle(group)
+            replay_demo_keys.extend(group)
+        return replay_demo_keys
+    else:
+        raise ValueError("demo_choose_method not supported")
 
 
 def replay_trajectory_and_collect_preference(dataset_path:str,
@@ -287,6 +359,14 @@ if __name__ == "__main__":
 
     parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[1])
     parser.add_argument("--collect_progress_times", type=int, default=10)
+    # parser.add_argument
     args = parser.parse_args()
     print(args.replay_demo_numbers)
-    replay_trajectory_and_collect_preference(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)
+    # replay_trajectory_and_collect_preference(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)
+    replay_trajectory_and_collect_progress(
+        "can-pick/can_low_dim_mh.hdf5", 
+        [],
+        10,
+        10,
+        "diff_quality_sequential_play"
+    )
