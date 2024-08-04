@@ -40,6 +40,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
     env_kwargs = json.loads(f["data"].attrs["env_args"])["env_kwargs"]
     # enable rendering
     env_kwargs["has_renderer"] = True
+    env_kwargs["reward_shaping"] = True
 
     # make environment
     env:PickPlaceCan = suite.make(
@@ -81,17 +82,19 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         env.sim.set_state_from_flattened(initial_state)
         env.sim.forward()
         env.render()
-        
+        reward = 0
 
         pause_indices = np.linspace(0, len(actions), collect_progress_times+2, dtype=int)[1:-1]
         pause_indices = np.append(pause_indices, len(actions)-1)
         progress = [0]
+        print(f"replaying demo: {key}, length: {len(actions)}")
         # replay demo
         for i in range(len(actions)):
             action = actions[i]
             # obs = obs[i]
             done = dones[i]
-            env.step(action)
+            _,rwd,_,_ = env.step(action)
+            reward += rwd
             env.render()
             if i == 0:
                 time.sleep(1)
@@ -120,6 +123,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
                 env.render()
             if i == len(actions)-1:
                 break
+        # print("total reward: ", reward)
     # write progress data to json file, each demo has a json file
         for key in progress_data.keys():
             write_to_json(progress_data[key], "{}.json".format(key), data_folder=data_folder)
@@ -367,6 +371,6 @@ if __name__ == "__main__":
         "can-pick/can_low_dim_mh.hdf5", 
         [],
         10,
-        10,
-        "diff_quality_sequential_play"
+        30,
+        "diff_quality_group_play"
     )

@@ -20,7 +20,6 @@ from robosuite.controllers import load_controller_config
 from utils.demostration_utils import load_dataset_and_annotations_simutanously
 from utils.annotation_utils import read_all_json
 from imitation.util import logger as imit_logger
-import imitation.scripts.train_adversarial as train_adversarial
 import argparse
 
 if __name__ == "__main__":
@@ -29,7 +28,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
+    dataset_path = os.path.join(project_path,"human-demo/can-pick/can_low_dim_mh.hdf5")
     log_dir = os.path.join(project_path,f"logs/{args.exp_name}")
     print(dataset_path)
     f = h5py.File(dataset_path,'r')
@@ -49,7 +48,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=False,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=1000,                            # each episode terminates after 200 steps
+        horizon=1000,                            # each episode terminates after 300 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -65,20 +64,22 @@ if __name__ == "__main__":
 
     )
 
-    annotation_dict = read_all_json("progress_data")
+    annotation_dict = read_all_json("progress_data_mh")
 
-    trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
+    trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
+                                         dataset_path = "human-demo/can-pick/can_low_dim_mh.hdf5")
     trajs_for_shaping, annotation_list = load_dataset_and_annotations_simutanously(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
                                                                        annotation_dict=annotation_dict,
                                                                        dataset_path=dataset_path)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = []
+    shape_reward = ["progress_sign_loss"]
+    # shape_reward = []
                                                                        
     learner = PPO(
         env=envs,
         policy=MlpPolicy,
-        batch_size=64,
+        batch_size=1024,
         ent_coef=0.0,
         learning_rate=0.0005,
         gamma=0.95,
@@ -123,14 +124,6 @@ if __name__ == "__main__":
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    # save the model
-    # if path does not exist, create it
-    if not os.path.exists(os.path.join(project_path,f"checkpoints/{args.exp_name}")):
-        os.makedirs(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
-    train_adversarial.save(airl_trainer, 
-                           os.path.join(project_path,f"checkpoints/{args.exp_name}"),
-                           )
-    # airl_trainer
-    # learner.save(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
+
     print("mean reward after training:", np.mean(learner_rewards_after_training))
     print("mean reward before training:", np.mean(learner_rewards_before_training))

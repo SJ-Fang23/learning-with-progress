@@ -16,6 +16,7 @@ with open(config_path, 'r') as cfg_file:
 
 controller_config = load_controller_config(default_controller="OSC_POSE")
 env_meta = json.loads(f["data"].attrs["env_args"])
+print("env_meta: ",env_meta)
 
 env:PickPlaceCan = suite.make(
     env_name="PickPlaceCan",
@@ -27,7 +28,7 @@ env:PickPlaceCan = suite.make(
     has_offscreen_renderer=False,           # no off-screen rendering
     control_freq=20,                        # 20 hz control for applied actions
     horizon=200,                            # each episode terminates after 200 steps
-    use_object_obs=False,                   # no observations needed
+    use_object_obs=True,                   # no observations needed
     use_camera_obs=False, 
 )
 # print(**env_meta["env_kwargs"])
@@ -43,7 +44,7 @@ print(len(f["data"]["demo_0"]["actions"]))
 print(f["data"]["demo_0"]["actions"][-1])
 print(f["data"]["demo_0"]["actions"][-2])
 
-print(len(f["data"]["demo_0"]["dones"]))
+print("obs: ",f["data"]["demo_0"]["obs"]["object"][0])
 env_meta = json.loads(f["data"].attrs["env_args"])
 # print(env_meta)
 # print(f["data"]["demo_0"]["obs"]["robot0_eef_pos"][0])
@@ -53,11 +54,11 @@ demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter
 # print(len(list(f["data"]["demo_0"]["obs"])))
 # print(f["data"]["demo_0"]["obs"]["object"])
 
-# initial_position = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"][0])
+initial_position = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"][0])
 
 
 # initial_state = f["data/demo_0/states"][0]
-# obs = env.reset()
+obs = env.reset()
 # # xml = env.edit_model_xml(initial_state["model"])
 # # env.reset_from_xml_string(xml)
 # env.sim.set_state_from_flattened(initial_state)
@@ -68,6 +69,11 @@ demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter
 # #     action = np.concatenate([initial_position,np.array([0])])
 # #     obs,_,_,_ = env.step(action)
 # #     env.render()
+
+action = np.zeros(7)
+obs,_,_,_ = env.step(action)
+print(obs.keys())
+print(obs["object-state"])
 
 # # state_array = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"])
 # for i in range(len(f["data"]["demo_0"]["actions"])):

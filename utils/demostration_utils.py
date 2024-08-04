@@ -14,11 +14,15 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
     trajectories = []
     for key in demo_keys:
-        obs_dict = {obs_key: np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys}
+        # obs_dict = {obs_key: np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys}
         # print(obs_dict.keys())
         # print(obs_dict["robot0_eef_pos"])
-        zipped = zip(*obs_dict.values()) 
-        obs = [np.concatenate(elem, axis=0) for elem in zipped]
+        # zipped = zip(*obs_dict.values()) 
+        # obs = [np.concatenate(elem, axis=0) for elem in zipped]
+        obs = [np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys]
+        # print(obs)
+        obs = np.concatenate(obs, axis=1)
+
         obs = np.stack(obs, axis=0)
         # print(obs)
         # print(len(obs))

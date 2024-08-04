@@ -1,0 +1,68 @@
+[
+    {
+        "start_step": 0,
+        "end_step": 26,
+        "start_progress": 0,
+        "end_progress": 5.0
+    },
+    {
+        "start_step": 26,
+        "end_step": 52,
+        "start_progress": 5.0,
+        "end_progress": 10.0
+    },
+    {
+        "start_step": 52,
+        "end_step": 78,
+        "start_progress": 10.0,
+        "end_progress": 15.0
+    },
+    {
+        "start_step": 78,
+        "end_step": 105,
+        "start_progress": 15.0,
+        "end_progress": 25.0
+    },
+    {
+        "start_step": 105,
+        "end_step": 131,
+        "start_progress": 25.0,
+        "end_progress": 30.0
+    },
+    {
+        "start_step": 131,
+        "end_step": 157,
+        "start_progress": 30.0,
+        "end_progress": 50.0
+    },
+    {
+        "start_step": 157,
+        "end_step": 183,
+        "start_progress": 50.0,
+        "end_progress": 55.0
+    },
+    {
+        "start_step": 183,
+        "end_step": 210,
+        "start_progress": 55.0,
+        "end_progress": 65.0
+    },
+    {
+        "start_step": 210,
+        "end_step": 236,
+        "start_progress": 65.0,
+        "end_progress": 75.0
+    },
+    {
+        "start_step": 236,
+        "end_step": 262,
+        "start_progress": 75.0,
+        "end_progress": 90.0
+    },
+    {
+        "start_step": 262,
+        "end_step": 288,
+        "start_progress": 90.0,
+        "end_progress": 100.0
+    }
+]
