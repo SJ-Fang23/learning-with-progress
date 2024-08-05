@@ -93,7 +93,10 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
             action = actions[i]
             # obs = obs[i]
             done = dones[i]
-            _,rwd,_,_ = env.step(action)
+            # print(action)
+            
+            obs,rwd,_,_ = env.step(action)
+            # print(obs["robot0_gripper_qpos"])
             reward += rwd
             env.render()
             if i == 0:
@@ -125,8 +128,8 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
                 break
         # print("total reward: ", reward)
     # write progress data to json file, each demo has a json file
-        for key in progress_data.keys():
-            write_to_json(progress_data[key], "{}.json".format(key), data_folder=data_folder)
+        # for key in progress_data.keys():
+        #     write_to_json(progress_data[key], "{}.json".format(key), data_folder=data_folder)
     
     f.close()
 
