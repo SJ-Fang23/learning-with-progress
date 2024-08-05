@@ -20,6 +20,8 @@ from robosuite.controllers import load_controller_config
 from utils.demostration_utils import load_dataset_and_annotations_simutanously
 from utils.annotation_utils import read_all_json
 from imitation.util import logger as imit_logger
+import imitation.scripts.train_adversarial as train_adversarial
+
 import argparse
 
 if __name__ == "__main__":
@@ -52,9 +54,10 @@ if __name__ == "__main__":
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
+        
     )
     envs = make_vec_env_robosuite(
-        "PickPlaceCan",
+        "PickPlaceCanModified",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
         n_envs=12,
@@ -73,8 +76,8 @@ if __name__ == "__main__":
                                                                        dataset_path=dataset_path)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = ["progress_sign_loss"]
-    # shape_reward = []
+    # shape_reward = ["progress_sign_loss"]
+    shape_reward = []
                                                                        
     learner = PPO(
         env=envs,
@@ -107,6 +110,7 @@ if __name__ == "__main__":
         annotation_list=annotation_list,
         demostrations_for_shaping=trajs_for_shaping,
         custom_logger = logger,
+        save_path = f"checkpoints/{args.exp_name}"
         # log_dir = log_dir,
         # init_tensorboard = True,
         # init_tensorboard_graph = True
@@ -127,3 +131,9 @@ if __name__ == "__main__":
 
     print("mean reward after training:", np.mean(learner_rewards_after_training))
     print("mean reward before training:", np.mean(learner_rewards_before_training))
+    # save the model
+    # if not os.path.exists(os.path.join(project_path,f"checkpoints/{args.exp_name}")):
+    #     os.makedirs(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
+    # train_adversarial.save(airl_trainer, 
+    #                        os.path.join(project_path,f"checkpoints/{args.exp_name}"),
+    #                        )

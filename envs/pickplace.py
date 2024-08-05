@@ -850,3 +850,31 @@ class PickPlaceCanDemo(PickPlace):
 
     def _reset_internal(self):
         return super()._reset_internal()
+
+class PickPlaceCanModified(PickPlaceCan):
+    '''
+    Modified version of the task where the task terminates after the object is placed in the bin
+    '''
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+    
+    def _post_action(self, action):
+        """
+        Modify the post-action method to check for task completion and terminate the episode if the task is completed.
+        Do any housekeeping after taking an action.
+        Args:
+            action (np.array): Action to execute within the environment
+        Returns:
+            3-tuple:
+                - (float) reward from the environment
+                - (bool) whether the current episode is completed or not
+                - (dict) empty dict to be filled with information by subclassed method
+        """
+        reward = self.reward(action)
+
+        # done if success or if we have reached the max episode length
+        self.done = ((self.timestep >= self.horizon) and not self.ignore_done) or self._check_success()
+
+        return reward, self.done, {}
+        
+

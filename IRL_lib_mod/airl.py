@@ -17,6 +17,9 @@ from imitation.rewards import reward_nets
 from imitation.data import types
 from copy import deepcopy
 import numpy as np
+import imitation.scripts.train_adversarial as train_adversarial
+import os
+from pathlib import Path
 
 STOCHASTIC_POLICIES = (sac_policies.SACPolicy, policies.ActorCriticPolicy)
 
@@ -42,6 +45,8 @@ class AIRL(common.AdversarialTrainer):
         shaping_loss_weight: float = 1.0,
         shaping_update_freq: int = 1,
         shaping_lr: float = 1e-3,
+        save_model_every = 20,
+        save_path = "checkpoints/default",
         **kwargs,
     ):
         """Builds an AIRL trainer.
@@ -80,6 +85,15 @@ class AIRL(common.AdversarialTrainer):
         self.shaping_update_freq = shaping_update_freq
         self.shaping_lr = shaping_lr
         self.shape_reward = shape_reward
+        self.save_model_every = save_model_every
+        self.save_path = save_path 
+        self.project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
+        self.save_path = os.path.join(self.project_path, self.save_path)
+        if not os.path.exists(self.save_path):
+            print("creating save path")
+            os.makedirs(self.save_path)
+        # path from str to Path
+        # self.save_path = Path(self.save_path)
 
     def logits_expert_is_high(
         self,
@@ -341,6 +355,14 @@ class AIRL(common.AdversarialTrainer):
             self.logger.dump(self._disc_step)
             if write_summaries:
                 self._summary_writer.add_histogram("disc_logits", disc_logits.detach())
-
+        # save the model
+        if self._global_step % self.save_model_every == 0:
+            # set save path according to the global step
+            save_path_this_time = os.path.join(self.save_path, f"{self._global_step}")
+            if not os.path.exists(save_path_this_time):
+                os.makedirs(save_path_this_time)
+            save_path_this_time = Path(save_path_this_time)
+            train_adversarial.save(self, 
+                                   save_path_this_time,)
         return train_stats
     

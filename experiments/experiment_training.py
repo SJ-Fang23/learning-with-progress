@@ -55,7 +55,7 @@ if __name__ == "__main__":
         reward_shaping=True,
     )
     envs = make_vec_env_robosuite(
-        "PickPlaceCan",
+        "PickPlaceCanModified",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
         n_envs=12,
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     learner = PPO(
         env=envs,
         policy=MlpPolicy,
-        batch_size=64,
+        batch_size=1024,
         ent_coef=0.0,
         learning_rate=0.0005,
         gamma=0.95,
@@ -106,6 +106,7 @@ if __name__ == "__main__":
         annotation_list=annotation_list,
         demostrations_for_shaping=trajs_for_shaping,
         custom_logger = logger,
+        save_path = f"checkpoints/{args.exp_name}"
         # log_dir = log_dir,
         # init_tensorboard = True,
         # init_tensorboard_graph = True
@@ -123,13 +124,7 @@ if __name__ == "__main__":
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    # save the model
-    # if path does not exist, create it
-    if not os.path.exists(os.path.join(project_path,f"checkpoints/{args.exp_name}")):
-        os.makedirs(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
-    train_adversarial.save(airl_trainer, 
-                           os.path.join(project_path,f"checkpoints/{args.exp_name}"),
-                           )
+
     # airl_trainer
     # learner.save(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
     print("mean reward after training:", np.mean(learner_rewards_after_training))

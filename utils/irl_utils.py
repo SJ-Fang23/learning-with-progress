@@ -24,6 +24,7 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecEnv
 import gymnasium as gym
 import robosuite as suite
 from robosuite.wrappers import GymWrapper
+from envs.pickplace import *
 from imitation.util.util import make_seeds
 
 
