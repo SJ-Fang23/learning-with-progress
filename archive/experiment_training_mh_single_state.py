@@ -31,9 +31,6 @@ if __name__ == "__main__":
     parser.add_argument('--continue_training', type=bool, default=False)
     parser.add_argument('--checkpoint', type=str, default="320")
     parser.add_argument('--load_exp_name', type=str, default="mh_sign_scale_loss_8m_1")
-    parser.add_argument('-s', '--sequence_keys', nargs='+', default=[])
-    parser.add_argument('-l', '--obs_seq_len', type=int, default=1)
-
     
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

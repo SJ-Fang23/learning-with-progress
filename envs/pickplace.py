@@ -855,7 +855,8 @@ class PickPlaceCanModified(PickPlaceCan):
     '''
     Modified version of the task where the task terminates after the object is placed in the bin
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, 
+                 **kwargs):
         super().__init__(**kwargs)
     
     def _post_action(self, action):

@@ -21,23 +21,15 @@ from utils.demostration_utils import load_dataset_and_annotations_simutanously
 from utils.annotation_utils import read_all_json
 from imitation.util import logger as imit_logger
 import imitation.scripts.train_adversarial as train_adversarial
-import torch
-
 import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="default_experiment")
-    parser.add_argument('--continue_training', type=bool, default=False)
-    parser.add_argument('--checkpoint', type=str, default="320")
-    parser.add_argument('--load_exp_name', type=str, default="mh_sign_scale_loss_8m_1")
-    parser.add_argument('-s', '--sequence_keys', nargs='+', default=[])
-    parser.add_argument('-l', '--obs_seq_len', type=int, default=1)
-
     
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    dataset_path = os.path.join(project_path,"human-demo/can-pick/can_low_dim_mh.hdf5")
+    dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
     log_dir = os.path.join(project_path,f"logs/{args.exp_name}")
     print(dataset_path)
     f = h5py.File(dataset_path,'r')
@@ -57,11 +49,10 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=False,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=1000,                            # each episode terminates after 300 steps
+        horizon=1000,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
-        
     )
     envs = make_vec_env_robosuite(
         "PickPlaceCanModified",
@@ -74,17 +65,15 @@ if __name__ == "__main__":
 
     )
 
-    annotation_dict = read_all_json("progress_data_mh")
+    annotation_dict = read_all_json("progress_data")
 
-    trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
-                                         dataset_path = "human-demo/can-pick/can_low_dim_mh.hdf5")
+    trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
     trajs_for_shaping, annotation_list = load_dataset_and_annotations_simutanously(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
                                                                        annotation_dict=annotation_dict,
                                                                        dataset_path=dataset_path)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = ["progress_sign_loss", "delta_progress_scale_loss"]
-    # shape_reward = []
+    shape_reward = []
                                                                        
     learner = PPO(
         env=envs,
@@ -103,10 +92,6 @@ if __name__ == "__main__":
         action_space=envs.action_space,
         normalize_input_layer=RunningNorm,
     )
-    generator_model_path = f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/gen_policy/model"
-    if args.continue_training:
-        reward_net = (torch.load(f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/reward_train.pt"))
-        learner = PPO.load(generator_model_path)
     # logger that write tensroborad to logs dir
     logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
     airl_trainer = AIRL(
@@ -130,26 +115,17 @@ if __name__ == "__main__":
     # loss = airl_trainer.progress_shaping_loss()
     # print(loss)
     # loss.backward()
-    # envs.seed(SEED)
-
-    # load the model to continue training
-
-    
-
+    envs.seed(SEED)
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
     airl_trainer.train(8_000_000)  # Train for 2_000_000 steps to match expert.
-    # envs.seed(SEED)
+    envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
 
+    # airl_trainer
+    # learner.save(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
     print("mean reward after training:", np.mean(learner_rewards_after_training))
     print("mean reward before training:", np.mean(learner_rewards_before_training))
-    # save the model
-    # if not os.path.exists(os.path.join(project_path,f"checkpoints/{args.exp_name}")):
-    #     os.makedirs(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
-    # train_adversarial.save(airl_trainer, 
-    #                        os.path.join(project_path,f"checkpoints/{args.exp_name}"),
-    #                        )

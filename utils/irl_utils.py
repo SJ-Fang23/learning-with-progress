@@ -39,6 +39,7 @@ def make_vec_env_robosuite(
     max_episode_steps: Optional[int] = None,
     post_wrappers: Optional[Sequence[Callable[[gym.Env, int], gym.Env]]] = None,
     env_make_kwargs: Optional[Mapping[str, Any]] = None,
+    sequential_wrapper = None
 ) -> VecEnv:
     """
     Create a VecEnv for a Robosuite environment.
@@ -46,7 +47,8 @@ def make_vec_env_robosuite(
     # Resolve the spec outside of the subprocess first, so that it is available to
     # subprocesses running `make_env` via automatic pickling.
     # Just to ensure packages are imported and spec is properly resolved
-    tmp_env = GymWrapper(suite.make(env_name, **env_make_kwargs), keys=obs_keys)
+    env = suite.make(env_name, **env_make_kwargs)
+    tmp_env = GymWrapper(env, keys=obs_keys)
     tmp_env.close()
     spec = tmp_env.spec
     env_make_kwargs = env_make_kwargs or {}

@@ -25,6 +25,7 @@ from imitation.util import logger as imit_logger
 import imitation.scripts.train_adversarial as train_adversarial
 import argparse
 import robosuite as suite
+import torch
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -60,6 +61,10 @@ if __name__ == "__main__":
     )
 
     policy = PPO.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model")
+    reward_net = (torch.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/reward_train.pt"))
+    reward_net.eval()
+    reward_net_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    reward_net.to(reward_net_device)
 
     evaluate_times = 10
     obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
@@ -68,13 +73,27 @@ if __name__ == "__main__":
         obs = env.reset()
         obs = [obs[key] for key in obs_keys]
         obs = np.concatenate(obs)
+        past_action = np.zeros(7)
         done = False
         while not done:
             action, _states = policy.predict(obs, deterministic=False)
             # print(action)
-            obs, reward, done, info = env.step(action)
-            obs = [obs[key] for key in obs_keys]
-            obs = np.concatenate(obs)
+            next_obs, reward, next_done, info = env.step(action)
+            next_obs = [next_obs[key] for key in obs_keys]
+            next_obs = np.concatenate(next_obs)
+            # print(next_obs)
+            
+            obs_tensor = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
+            action_tensor = torch.tensor(action).float().unsqueeze(0).to(reward_net_device)
+            next_obs_tensor = torch.tensor(next_obs).float().unsqueeze(0).to(reward_net_device)
+            done = torch.tensor([0]).float().unsqueeze(0).to(reward_net_device)
+            # get the reward from the reward network
+            disc_rew = reward_net(obs_tensor, action_tensor, next_obs_tensor, done)
+
+            obs = next_obs
+            past_action = action
+            print(f"Discriminator Reward: {disc_rew}")
+
             env.render()
             if done:
                 break
