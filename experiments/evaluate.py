@@ -70,8 +70,8 @@ if __name__ == "__main__":
         obs = np.concatenate(obs)
         done = False
         while not done:
-            action, _states = policy.predict(obs)
-            print(action)
+            action, _states = policy.predict(obs, deterministic=False)
+            # print(action)
             obs, reward, done, info = env.step(action)
             obs = [obs[key] for key in obs_keys]
             obs = np.concatenate(obs)

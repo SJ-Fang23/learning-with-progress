@@ -21,12 +21,16 @@ from utils.demostration_utils import load_dataset_and_annotations_simutanously
 from utils.annotation_utils import read_all_json
 from imitation.util import logger as imit_logger
 import imitation.scripts.train_adversarial as train_adversarial
+import torch
 
 import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="default_experiment")
+    parser.add_argument('--continue_training', type=bool, default=False)
+    parser.add_argument('--checkpoint', type=str, default="320")
+    parser.add_argument('--load_exp_name', type=str, default="mh_sign_scale_loss_8m_1")
     
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -76,8 +80,8 @@ if __name__ == "__main__":
                                                                        dataset_path=dataset_path)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    # shape_reward = ["progress_sign_loss"]
-    shape_reward = []
+    shape_reward = ["progress_sign_loss", "delta_progress_scale_loss"]
+    # shape_reward = []
                                                                        
     learner = PPO(
         env=envs,
@@ -96,6 +100,10 @@ if __name__ == "__main__":
         action_space=envs.action_space,
         normalize_input_layer=RunningNorm,
     )
+    generator_model_path = f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/gen_policy/model"
+    if args.continue_training:
+        reward_net = (torch.load(f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/reward_train.pt"))
+        learner = PPO.load(generator_model_path)
     # logger that write tensroborad to logs dir
     logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
     airl_trainer = AIRL(
@@ -119,12 +127,17 @@ if __name__ == "__main__":
     # loss = airl_trainer.progress_shaping_loss()
     # print(loss)
     # loss.backward()
-    envs.seed(SEED)
+    # envs.seed(SEED)
+
+    # load the model to continue training
+
+    
+
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
     airl_trainer.train(8_000_000)  # Train for 2_000_000 steps to match expert.
-    envs.seed(SEED)
+    # envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
