@@ -39,7 +39,8 @@ def make_vec_env_robosuite(
     max_episode_steps: Optional[int] = None,
     post_wrappers: Optional[Sequence[Callable[[gym.Env, int], gym.Env]]] = None,
     env_make_kwargs: Optional[Mapping[str, Any]] = None,
-    sequential_wrapper = None
+    sequential_wrapper = None,
+    sequential_wrapper_kwargs = None
 ) -> VecEnv:
     """
     Create a VecEnv for a Robosuite environment.
@@ -65,8 +66,9 @@ def make_vec_env_robosuite(
         assert env_make_kwargs is not None  # Note: to satisfy mypy
         # assert spec is not None  # Note: to satisfy mypy
         env = suite.make(env_name, **env_make_kwargs)
+        if sequential_wrapper:
+            env = sequential_wrapper(env, **sequential_wrapper_kwargs)
         env = GymWrapper(env, keys=obs_keys)
-
         # Seed each environment with a different, non-sequential seed for diversity
         # (even if caller is passing us sequentially-assigned base seeds). int() is
         # necessary to work around gym bug where it chokes on numpy int64s.
