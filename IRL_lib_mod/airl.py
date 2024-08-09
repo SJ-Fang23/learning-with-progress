@@ -157,12 +157,15 @@ class AIRL(common.AdversarialTrainer):
         # randomly choose some demonstrations from annotation_list
         # randomly generate a batch of indices
         indices = np.random.choice(len(self.annotation_list), self.shaping_batch_size , replace=False)
-        
+        threshold = 0.1
         # get corresponding annotations
         annotations = [self.annotation_list[idx] for idx in indices]
 
         # get the progress change from annotations
-        delta_progress = th.tensor([annotation[0]["start_progress"] - annotation[0]["end_progress"] for annotation in annotations])
+        # print("type check",type(annotations[0][0]["start_progress"]))
+        delta_progress = th.tensor([annotation[0]["start_progress"] - annotation[0]["end_progress" ]  - threshold for annotation in annotations])
+        # print("what is this",annotations[0][0])
+        #progress = th.tensor([annotation[0]["end_progress"] for annotation in annotations])
 
         # get the average progress value
         average_progress_value = th.tensor(([(annotation[0]["start_progress"] + annotation[0]["end_progress"]) / 2 for annotation in annotations]))
@@ -197,6 +200,12 @@ class AIRL(common.AdversarialTrainer):
 
         # get the reward output from the reward network
         reward_output_train = self._reward_net.base(states, actions, next_states, dones)
+        v_s = self._reward_net.potential(states)
+        v_s_next = self._reward_net.potential(next_states)
+        delta_value = v_s_next - v_s
+        advatanage_output = th.tensor([0.0 for i in range(len(states))])
+        advatanage_output = self._reward_net(states, actions, next_states, th.tensor(1))
+
 
         # get the value output from the potential part of reward network
         old_value_output_train = self._reward_net.potential(states).flatten()
@@ -205,6 +214,10 @@ class AIRL(common.AdversarialTrainer):
 
         # sum the reward output for each trajectory
         reward_output_train = th.stack([reward_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
+
+        delta_value = th.stack([delta_value[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
+        advatanage_output = th.stack([advatanage_output[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)]) 
+        
 
         # sum the value output for each trajectory
         old_value_output_train = th.stack([old_value_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
@@ -224,11 +237,26 @@ class AIRL(common.AdversarialTrainer):
 
         loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
         loss_scale = self.delta_progress_scale_loss(delta_progress, reward_output_train)
+        loss_value = self.value_sign_loss(delta_progress, delta_value)
+        loss_advantage = self.advantage_sign_loss(delta_progress, advatanage_output)
         loss_progress_value = self.progress_value_loss(average_progress_value, next_value_output_train)
 
-        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale, "progress_value_loss": loss_progress_value}
-        
+        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale, "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, , "progress_value_loss": loss_progress_value}
 
+        
+    def value_sign_loss(self,
+                   delta_progress: th.tensor,
+                   delta_value: th.tensor) -> th.tensor:
+        
+        value_agreement = (th.sign(delta_progress).to(self.gen_algo.device)) * (th.sign(delta_value))
+        loss = th.mean(th.relu(-value_agreement))
+        return loss
+    def advantage_sign_loss(self,
+                     delta_progress: th.tensor,
+                        delta_advantage: th.tensor) -> th.tensor:
+        advantage_agreement = (th.sign(delta_progress).to(self.gen_algo.device)) * (th.sign(delta_advantage))
+        loss = th.mean(th.relu(-advantage_agreement))
+        return loss
     
     def progress_sign_loss(self, 
                            delta_progress: th.tensor, 

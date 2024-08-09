@@ -27,4 +27,5 @@ line 74 in
 experiments/experiment_training.py
 ```
 
-currenly supports: "progress_sign_loss","delta_progress_scale_loss", "progress_value_loss"
+currenly supports: "progress_sign_loss","delta_progress_scale_loss", "value_sign_loss", "advantage_sign_loss" , "progress_value_loss"
+
