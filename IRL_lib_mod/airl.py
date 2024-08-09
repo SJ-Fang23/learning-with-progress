@@ -164,6 +164,9 @@ class AIRL(common.AdversarialTrainer):
         # get the progress change from annotations
         delta_progress = th.tensor([annotation[0]["start_progress"] - annotation[0]["end_progress"] for annotation in annotations])
 
+        # get the average progress value
+        average_progress_value = th.tensor(([(annotation[0]["start_progress"] + annotation[0]["end_progress"]) / 2 for annotation in annotations]))
+
         # get corresponding states and actions
         demostration_indicies = [(annotation[1], annotation[0]["start_step"], annotation[0]["end_step"]) for annotation in annotations]
         states = [th.tensor(self.demonstrations_for_shaping[demostration_index].obs[start_step:end_step], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
@@ -195,20 +198,35 @@ class AIRL(common.AdversarialTrainer):
         # get the reward output from the reward network
         reward_output_train = self._reward_net.base(states, actions, next_states, dones)
 
+        # get the value output from the potential part of reward network
+        old_value_output_train = self._reward_net.potential(states).flatten()
+        next_value_output_train = self._reward_net.potential(next_states).flatten()
+
+
         # sum the reward output for each trajectory
         reward_output_train = th.stack([reward_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
+
+        # sum the value output for each trajectory
+        old_value_output_train = th.stack([old_value_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
+        next_value_output_train = th.stack([next_value_output_train[state_indicies[i]:state_indicies[i+1]].sum() for i in range(len(state_lengths)-1)])
         
         # the reward sum should have same length as delta_progress
         assert len(reward_output_train) == len(delta_progress), "reward_output_train and delta_progress should have same length"
+        assert len(old_value_output_train) == len(delta_progress), "old_value_output_train and delta_progress should have same length"
+        assert len(next_value_output_train) == len(delta_progress), "next_value_output_train and delta_progress should have same length"
 
         # to device
         delta_progress = delta_progress.to(self.gen_algo.device)
+        average_progress_value = average_progress_value.to(self.gen_algo.device)
         reward_output_train = reward_output_train.to(self.gen_algo.device)
+        old_value_output_train = old_value_output_train.to(self.gen_algo.device)
+        next_value_output_train = next_value_output_train.to(self.gen_algo.device)
 
         loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
         loss_scale = self.delta_progress_scale_loss(delta_progress, reward_output_train)
+        loss_progress_value = self.progress_value_loss(average_progress_value, next_value_output_train)
 
-        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale}
+        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale, "progress_value_loss": loss_progress_value}
         
 
     
@@ -232,6 +250,18 @@ class AIRL(common.AdversarialTrainer):
         # we want reward_output_train_diff to be larger when delta_progress_diff is larger
         # idea is that if delta_progress_diff > 0, then reward_output_train_diff > 0
         loss = th.mean(th.relu(-th.sign(delta_progress_diff * reward_output_train_diff)))
+        return loss
+    
+    def progress_value_loss(self, 
+                            average_progress: th.tensor, 
+                            next_value_output_train: th.tensor) -> th.tensor:
+        # the higher the average progress, the higher the value output should be
+        average_progress_diff = average_progress.unsqueeze(1) - average_progress.unsqueeze(0)
+        next_value_output_train_diff = next_value_output_train.unsqueeze(1) - next_value_output_train.unsqueeze(0)
+
+        # we want next_value_output_train_diff to be larger when average_progress_diff is larger
+        # idea is that if average_progress_diff > 0, then next_value_output_train_diff > 0
+        loss = th.mean(th.relu(-th.sign(average_progress_diff * next_value_output_train_diff)))
         return loss
 
 

@@ -27,6 +27,9 @@ import argparse
 import robosuite as suite
 import torch
 
+from envs.wrappers import SequentialObservationWrapper
+from robosuite.wrappers import GymWrapper
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="default_experiment")
@@ -59,6 +62,21 @@ if __name__ == "__main__":
         "PickPlaceCanModified",
         **make_env_kwargs,
     )
+    env = SequentialObservationWrapper(env, sequential_observation_keys = ["robot0_gripper_qpos"], sequential_observation_length = 10, use_half_gripper_obs = True)
+    env = GymWrapper(env, keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
+
+    sequential_wrapper_kwargs = dict(
+            sequential_observation_keys = ["robot0_gripper_qpos"], 
+            sequential_observation_length = 10, 
+            use_half_gripper_obs = True
+        )
+
+    
+    # action = np.zeros(7)
+    # obs = envs.reset()
+    # print(obs)
+    # obs, _, _, _ = env.step(action)
+    # print(obs)
 
     policy = PPO.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model")
     reward_net = (torch.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/reward_train.pt"))
@@ -71,28 +89,30 @@ if __name__ == "__main__":
     
     for i in range(evaluate_times):
         obs = env.reset()
-        obs = [obs[key] for key in obs_keys]
-        obs = np.concatenate(obs)
+        obs = obs[0]
+        # obs = [obs[key] for key in obs_keys]
+        # obs = np.concatenate(obs)
         past_action = np.zeros(7)
         done = False
         while not done:
             action, _states = policy.predict(obs, deterministic=False)
             # print(action)
-            next_obs, reward, next_done, info = env.step(action)
-            next_obs = [next_obs[key] for key in obs_keys]
-            next_obs = np.concatenate(next_obs)
+            next_obs, reward, next_done ,_,info = env.step(action)
+            # print(next_obs)
+            # next_obs = [next_obs[key] for key in obs_keys]
+            # next_obs = np.concatenate(next_obs)
             # print(next_obs)
             
-            obs_tensor = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
-            action_tensor = torch.tensor(action).float().unsqueeze(0).to(reward_net_device)
-            next_obs_tensor = torch.tensor(next_obs).float().unsqueeze(0).to(reward_net_device)
-            done = torch.tensor([0]).float().unsqueeze(0).to(reward_net_device)
-            # get the reward from the reward network
-            disc_rew = reward_net(obs_tensor, action_tensor, next_obs_tensor, done)
+            # obs_tensor = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
+            # action_tensor = torch.tensor(action).float().unsqueeze(0).to(reward_net_device)
+            # next_obs_tensor = torch.tensor(next_obs).float().unsqueeze(0).to(reward_net_device)
+            # done = torch.tensor([0]).float().unsqueeze(0).to(reward_net_device)
+            # # get the reward from the reward network
+            # disc_rew = reward_net(obs_tensor, action_tensor, next_obs_tensor, done)
 
             obs = next_obs
             past_action = action
-            print(f"Discriminator Reward: {disc_rew}")
+            # print(f"Discriminator Reward: {disc_rew}")
 
             env.render()
             if done:
