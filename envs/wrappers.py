@@ -6,7 +6,7 @@ class SequentialObservationWrapper(Wrapper):
     def __init__(self,
                   env,
                 sequential_observation_keys = ["robot0_gripper_qpos"], 
-                sequential_observation_length = 5,
+                sequential_observation_length = 50,
                 use_half_gripper_obs = True):
         super().__init__(env)
         self.sequential_observation_keys = sequential_observation_keys

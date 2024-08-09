@@ -123,7 +123,7 @@ if __name__ == "__main__":
                                          use_half_gripper_obs=True)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = ["progress_sign_loss", "delta_progress_scale_loss"]
+    shape_reward = ["progress_sign_loss", "value_sign_loss", "advantage_sign_loss"]
     # shape_reward = []
 
     for i in range(len(trajs_for_shaping)):
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    airl_trainer.train(8_000_000)  # Train for 2_000_000 steps to match expert.
+    airl_trainer.train(12_000_000)  # Train for 2_000_000 steps to match expert.
     # envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
