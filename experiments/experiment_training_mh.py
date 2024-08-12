@@ -90,7 +90,7 @@ if __name__ == "__main__":
      
 
     envs = make_vec_env_robosuite(
-        "PickPlaceCanModified",
+        "PickPlaceCan",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
         n_envs=12,
