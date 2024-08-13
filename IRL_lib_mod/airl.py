@@ -241,7 +241,7 @@ class AIRL(common.AdversarialTrainer):
         loss_advantage = self.advantage_sign_loss(delta_progress, advatanage_output)
         loss_progress_value = self.progress_value_loss(average_progress_value, next_value_output_train)
 
-        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale, "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, , "progress_value_loss": loss_progress_value}
+        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale, "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, "progress_value_loss": loss_progress_value}
 
         
     def value_sign_loss(self,
