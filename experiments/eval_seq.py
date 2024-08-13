@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="default_experiment")
     parser.add_argument('--checkpoint', type=str, default="300")
+    parser.add_argument('-l', '--obs_seq_len', type=int, default=1)
 
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -62,14 +63,14 @@ if __name__ == "__main__":
         "PickPlaceCanModified",
         **make_env_kwargs,
     )
-    env = SequentialObservationWrapper(env, sequential_observation_keys = ["robot0_gripper_qpos"], sequential_observation_length = 10, use_half_gripper_obs = True)
+    env = SequentialObservationWrapper(env, sequential_observation_keys = ["robot0_gripper_qpos"], sequential_observation_length = args.obs_seq_len, use_half_gripper_obs = True)
     env = GymWrapper(env, keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
 
-    sequential_wrapper_kwargs = dict(
-            sequential_observation_keys = ["robot0_gripper_qpos"], 
-            sequential_observation_length = 10, 
-            use_half_gripper_obs = True
-        )
+    # sequential_wrapper_kwargs = dict(
+    #         sequential_observation_keys = ["robot0_gripper_qpos"], 
+    #         sequential_observation_length = 10, 
+    #         use_half_gripper_obs = True
+    #     )
 
     
     # action = np.zeros(7)
