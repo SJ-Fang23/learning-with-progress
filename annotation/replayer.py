@@ -56,8 +56,8 @@ def replay_demo(dataset_path: str):
             # print(np.linalg.norm(obs["object-state"][7:10]))
             # print(obs["robot0_eef_pos"][2])
             # print(obs[16])
-            print(np.linalg.norm(obs[7:10]))
-            # print("gripper action: ", action[-1])
+            # print(np.linalg.norm(obs[7:10]))
+            print("gripper action: ", action[-1])
             env.render()
             time.sleep(0.1)
             if dones[i]:

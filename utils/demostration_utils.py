@@ -18,7 +18,6 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
     trajectories = []
     for key in demo_keys:
-        
         # get the normal not sequential observations part
         obs = [np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys if not obs_key in sequential_obs_keys]
 

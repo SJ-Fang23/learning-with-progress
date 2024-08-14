@@ -57,7 +57,7 @@ if __name__ == "__main__":
         reward_shaping=True,
     )
 
-    SEED = 42
+    SEED = 1
 
     env = suite.make(
         "PickPlaceCanModified",
@@ -96,7 +96,9 @@ if __name__ == "__main__":
         past_action = np.zeros(7)
         done = False
         while not done:
-            action, _states = policy.predict(obs, deterministic=False)
+            # action, _states = policy.predict(obs, deterministic=False)
+            action, _,_ = policy.policy(torch.tensor(obs).float().unsqueeze(0).to(reward_net_device))
+            action = action.cpu().detach().numpy().squeeze()
             # print(action)
             next_obs, reward, next_done ,_,info = env.step(action)
             # print(next_obs)
