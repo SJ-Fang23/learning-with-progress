@@ -50,7 +50,12 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
 
     # check if dataset is mh by checking if mh is in the file name
     is_mh = "mh" in dataset_path
-    if is_mh:
+    is_online = "online" in dataset_path
+    if is_online:
+        replay_demo_keys = [key for key in f["data"].keys()]
+        exp_name = f["exp_name"]
+        data_folder = f"online_data_progress/{exp_name}"
+    elif is_mh:
         # get demo keys with different quality
         replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
         # set json data folder

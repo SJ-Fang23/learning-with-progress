@@ -1,3 +1,6 @@
+# archived of presreve old PPO parameters
+
+
 # train on ph using binary gripper with manual close gripper chance, and modified hyperparameters
 
 
@@ -94,7 +97,7 @@ if __name__ == "__main__":
      
 
     envs = make_vec_env_robosuite(
-        "PickPlaceCan",
+        "PickPlaceCanModified",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
         n_envs=12,
@@ -125,7 +128,7 @@ if __name__ == "__main__":
     # type of reward shaping to use
     # change this to enable or disable reward shaping
     # shape_reward = ["progress_sign_loss", "delta_progress_scale_loss", ]
-    shape_reward = ["progress_sign_loss","delta_progress_scale_loss", "value_sign_loss", "advantage_sign_loss"]
+    shape_reward = []
 
     policy_kwargs = dict(
         manual_close_gripper_chance = 0.8)
@@ -133,10 +136,10 @@ if __name__ == "__main__":
     learner = PPO(
         env=envs,
         policy=ActorCriticPolicyWrapperManualCloseGripper,
-        batch_size=128,
+        batch_size=1024,
         ent_coef=0.0,
-        learning_rate=3e-4,
-        gamma=0.99,
+        learning_rate=0.0005,
+        gamma=0.95,
         clip_range=0.2,
         vf_coef=0.5,
         n_epochs=10,
@@ -157,7 +160,8 @@ if __name__ == "__main__":
     airl_trainer = AIRL(
         demonstrations=trajs,
         demo_batch_size=2048,
-        gen_replay_buffer_capacity=1000000,
+        # gen_replay_buffer_capacity=1000000,
+        gen_replay_buffer_capacity=100000,
         n_disc_updates_per_round=32,
         venv=envs,
         gen_algo=learner,
@@ -166,7 +170,8 @@ if __name__ == "__main__":
         annotation_list=annotation_list,
         demostrations_for_shaping=trajs_for_shaping,
         custom_logger = logger,
-        save_path = f"checkpoints/{args.exp_name}"
+        save_path = f"checkpoints/{args.exp_name}",
+        allow_variable_horizon = True,
         # log_dir = log_dir,
         # init_tensorboard = True,
         # init_tensorboard_graph = True
