@@ -78,8 +78,11 @@ if __name__ == "__main__":
         while not done:
             # action, _states = policy.policy.predict(obs, deterministic=False)
             obs = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
+            # obs = np.array(obs).reshape(1, -1)
+            # action, _states = policy.policy.predict(obs, deterministic=False)
             action, _,_ = policy.policy(obs, deterministic=False)
             action = action.cpu().detach().numpy().squeeze()
+            action = action.squeeze()
             # print(action)
             next_obs, reward, next_done, info = env.step(action)
             next_obs = [next_obs[key] for key in obs_keys]
@@ -95,7 +98,8 @@ if __name__ == "__main__":
 
             obs = next_obs
             past_action = action
-            print(f"Discriminator Reward: {disc_rew}")
+            if action[-1] > 0:
+                print(f"Discriminator Reward: {disc_rew}")
 
             env.render()
             if done:
