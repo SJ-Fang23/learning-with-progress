@@ -133,13 +133,13 @@ if __name__ == "__main__":
     learner = PPO(
         env=envs,
         policy=MlpPolicy,
-        batch_size=1024,
-        ent_coef=0.0,
-        learning_rate=0.0005,
+        batch_size=128,
+        ent_coef=0.00,
+        learning_rate=3e-4,
         gamma=0.95,
-        clip_range=0.1,
-        vf_coef=0.1,
-        n_epochs=5,
+        clip_range=0.4,
+        vf_coef=0.5,
+        n_epochs=10,
         seed=SEED,
     )
     reward_net = BasicShapedRewardNet(
@@ -155,9 +155,9 @@ if __name__ == "__main__":
     logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
     airl_trainer = AIRL(
         demonstrations=trajs,
-        demo_batch_size=2048,
-        gen_replay_buffer_capacity=1000000,
-        n_disc_updates_per_round=64,
+        demo_batch_size=512,
+        gen_replay_buffer_capacity=50000,
+        n_disc_updates_per_round=8,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
@@ -165,10 +165,9 @@ if __name__ == "__main__":
         annotation_list=annotation_list,
         demostrations_for_shaping=trajs_for_shaping,
         custom_logger = logger,
-        save_path = f"checkpoints/{args.exp_name}"
-        # log_dir = log_dir,
-        # init_tensorboard = True,
-        # init_tensorboard_graph = True
+        save_path = f"checkpoints/{args.exp_name}",
+        # # enable dynamic horizon
+        # dynamic_horizon=True
     )
 
     # loss = airl_trainer.progress_shaping_loss()
@@ -183,8 +182,10 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    airl_trainer.train(8_000_000)  # Train for 2_000_000 steps to match expert.
-    # envs.seed(SEED)
+
+    airl_trainer.train(16_000_000)  # Train for 2_000_000 steps to match expert.
+
+# envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )

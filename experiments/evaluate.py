@@ -30,7 +30,7 @@ import torch
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="default_experiment")
-    parser.add_argument('--checkpoint', type=str, default="300")
+    parser.add_argument('--checkpoint', type=str, default="260")
 
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,14 +60,15 @@ if __name__ == "__main__":
         **make_env_kwargs,
     )
 
-    policy = PPO.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model")
-    reward_net = (torch.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/reward_train.pt"))
+    policy = PPO.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model", weight_only=True)
+    reward_net = torch.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/reward_train.pt")
     reward_net.eval()
     reward_net_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     reward_net.to(reward_net_device)
 
     evaluate_times = 10
     obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
+
     
     for i in range(evaluate_times):
         obs = env.reset()
@@ -75,28 +76,44 @@ if __name__ == "__main__":
         obs = np.concatenate(obs)
         past_action = np.zeros(7)
         done = False
+        cnt = 0
+        rewards= 0
+        total_disc_rew = 0
         while not done:
-            # action, _states = policy.policy.predict(obs, deterministic=False)
+            
+            action, _states = policy.predict(obs, deterministic=True)
+            cnt += 1
             obs = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
-            action, _,_ = policy.policy(obs, deterministic=False)
-            action = action.cpu().detach().numpy().squeeze()
-            # print(action)
+            obs = obs.cpu().detach().numpy()
+            # print("obs", obs)   
+            
+            #action, _ = policy.predict(obs, deterministic=True)
+            action = action.squeeze()
+            #print(action)
+            # if cnt > 200:
+            #     action[6] = 1
+            #action = action.cpu().detach().numpy().squeeze()
+
             next_obs, reward, next_done, info = env.step(action)
+            rewards +=reward
             next_obs = [next_obs[key] for key in obs_keys]
             next_obs = np.concatenate(next_obs)
-            # print(next_obs)
-            
-            obs_tensor = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
+            # # print(next_obs)
+            obs = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
+            obs_tensor = obs.unsqueeze(0).to(reward_net_device).detach()
             action_tensor = torch.tensor(action).float().unsqueeze(0).to(reward_net_device)
             next_obs_tensor = torch.tensor(next_obs).float().unsqueeze(0).to(reward_net_device)
             done = torch.tensor([0]).float().unsqueeze(0).to(reward_net_device)
             # get the reward from the reward network
             disc_rew = reward_net(obs_tensor, action_tensor, next_obs_tensor, done)
+            total_disc_rew += disc_rew  
 
             obs = next_obs
             past_action = action
             print(f"Discriminator Reward: {disc_rew}")
 
             env.render()
-            if done:
+            if next_done:
                 break
+        print(f"Total Discriminator Reward: {total_disc_rew}")
+        print(f"Total Reward: {rewards}")

@@ -120,7 +120,7 @@ if __name__ == "__main__":
                                          use_half_gripper_obs=True)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = ["progress_sign_loss", "delta_progress_scale_loss"]
+    shape_reward = ["progress_sign_loss", "value_sign_loss", "advantage_sign_loss"]
 
     for i in range(len(trajs_for_shaping)):
         if trajs_for_shaping[i].obs.shape[1] != 21 + args.obs_seq_len:
@@ -129,11 +129,11 @@ if __name__ == "__main__":
     learner = PPO(
         env=envs,
         policy=MlpPolicy,
-        batch_size=1024,
-        ent_coef=0.1,
-        learning_rate=0.0005,
+        batch_size=128,
+        ent_coef=0.00,
+        learning_rate=3e-4,
         gamma=0.95,
-        clip_range=0.3,
+        clip_range=0.5,
         vf_coef=0.5,
         n_epochs=10,
         seed=SEED,
@@ -154,8 +154,8 @@ if __name__ == "__main__":
     logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
     airl_trainer = AIRL(
         demonstrations=trajs,
-        demo_batch_size=2048,
-        gen_replay_buffer_capacity=1000000,
+        demo_batch_size=512,
+        gen_replay_buffer_capacity=5000,
         n_disc_updates_per_round=64,
         venv=envs,
         gen_algo=learner,
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    airl_trainer.train(8_000_000)  # Train for 2_000_000 steps to match expert.
+    airl_trainer.train(32_000_000)  # Train for 2_000_000 steps to match expert.
     # envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,

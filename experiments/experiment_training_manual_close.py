@@ -121,7 +121,7 @@ if __name__ == "__main__":
                                          use_half_gripper_obs=True)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = ["progress_sign_loss", "delta_progress_scale_loss"]
+    shape_reward = ["progress_sign_loss", "delta_progress_scale_loss", "value_sign_loss", "advantage_sign_loss"]
     # shape_reward = []
 
                                                                   
@@ -132,9 +132,9 @@ if __name__ == "__main__":
         ent_coef=0.0,
         learning_rate=0.0005,
         gamma=0.95,
-        clip_range=0.1,
+        clip_range=0.2,
         vf_coef=0.1,
-        n_epochs=5,
+        n_epochs=10,
         seed=SEED,
     )
     reward_net = BasicShapedRewardNet(
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         demonstrations=trajs,
         demo_batch_size=2048,
         gen_replay_buffer_capacity=1000000,
-        n_disc_updates_per_round=64,
+        n_disc_updates_per_round=16,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
@@ -160,7 +160,8 @@ if __name__ == "__main__":
         annotation_list=annotation_list,
         demostrations_for_shaping=trajs_for_shaping,
         custom_logger = logger,
-        save_path = f"checkpoints/{args.exp_name}"
+        save_path = f"checkpoints/{args.exp_name}",
+        allow_variable_horizon=True,
         # log_dir = log_dir,
         # init_tensorboard = True,
         # init_tensorboard_graph = True
@@ -178,7 +179,7 @@ if __name__ == "__main__":
     learner_rewards_before_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
     )
-    airl_trainer.train(8_000_000)  # Train for 2_000_000 steps to match expert.
+    airl_trainer.train(24_000_000)  # Train for 2_000_000 steps to match expert.
     # envs.seed(SEED)
     learner_rewards_after_training, _ = evaluate_policy(
         learner, envs, 12, return_episode_rewards=True,
