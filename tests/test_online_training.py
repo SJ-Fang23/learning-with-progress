@@ -25,6 +25,8 @@ from imitation.util import logger as imit_logger
 import imitation.scripts.train_adversarial as train_adversarial
 import torch
 
+from annotation.online_annotation import load_online_data_with_annotations
+
 import argparse
 
 
@@ -94,7 +96,7 @@ if __name__ == "__main__":
         "PickPlaceCanModified",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
-        n_envs=12,
+        n_envs=2,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
@@ -119,6 +121,13 @@ if __name__ == "__main__":
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
                                          use_half_gripper_obs=True)
+    
+    online_trajs, online_annotation_list = load_online_data_with_annotations(
+        online_data_exp_name="test_wrapper_continue",
+        online_data_checkpoint=300
+    )
+
+    # print("online annotation list", online_annotation_list)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
     shape_reward = ["progress_sign_loss","delta_progress_scale_loss", "value_sign_loss", "advantage_sign_loss"]
@@ -189,11 +198,5 @@ if __name__ == "__main__":
         learner, envs, 12, return_episode_rewards=True,
     )
 
-    print("mean reward after training:", np.mean(learner_rewards_after_training))
-    print("mean reward before training:", np.mean(learner_rewards_before_training))
-    # save the model
-    # if not os.path.exists(os.path.join(project_path,f"checkpoints/{args.exp_name}")):
-    #     os.makedirs(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
-    # train_adversarial.save(airl_trainer, 
-    #                        os.path.join(project_path,f"checkpoints/{args.exp_name}"),
-    #                        )
+    # print("mean reward after training:", np.mean(learner_rewards_after_training))
+    # print("mean reward before training:", np.mean(learner_rewards_before_training))

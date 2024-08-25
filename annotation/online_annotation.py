@@ -17,6 +17,7 @@ from envs.pickplace import PickPlaceCan
 from robosuite.wrappers import GymWrapper
 from stable_baselines3 import PPO
 from annotation.replay_collector import replay_trajectory_and_collect_progress
+from imitation.data import types
 
 
 def collect_policy_rollouts(
@@ -86,6 +87,8 @@ def collect_policy_rollouts(
 
             if done:
                 break
+        single_rollout["obs"].append(obs)
+        single_rollout["dones"].append(done)
         
         rollout_data["data"][f'rollout_{i}'] = single_rollout
 
@@ -136,6 +139,11 @@ def replay_online_trajectory_and_collect_progress(
 
     progress_data = dict()
 
+    online_data_file_name = os.path.basename(online_data_path)[:os.path.basename(online_data_path).find(".")]
+    progress_data_folder = os.path.join(progress_data_folder, online_data_file_name)
+    if not os.path.exists(progress_data_folder):
+        os.makedirs(progress_data_folder)
+
     # do the replay
     for data in online_data.keys():
 
@@ -185,8 +193,48 @@ def replay_online_trajectory_and_collect_progress(
             if i == len(actions) - 1:
                 break
         
+        
         write_to_json(progress_data[data], "{}.json".format(data), data_folder=progress_data_folder)
+
+def load_online_data_with_annotations(
+       online_data_exp_name,
+        online_data_checkpoint, 
+):
+    project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    online_data_path = f"online_data_{online_data_exp_name}_{online_data_checkpoint}.npz"
+    online_data_path = os.path.join(project_path, "online_data", online_data_path)
+
+    online_data = np.load(online_data_path, allow_pickle=True)["data"]
+    online_data = online_data.item()
+
+    progress_data_folder = os.path.join(project_path, "online_progress_data", f"online_data_{online_data_exp_name}_{online_data_checkpoint}")
+    progress_data = dict()
+    trajectories = []
+    annotation_list = []
+    for data in online_data.keys():
+
+        data_values = online_data[data]
+        obs = data_values["obs"]
+        actions = data_values["actions"]
+        dones = data_values["dones"]
+        rewards = data_values["rewards"]
+
+        # make trajectory
+        trajectory = types.Trajectory(
+            obs = obs,
+            acts = actions,
+            terminal = dones,
+            infos = None,
+        )
+        trajectories.append(trajectory)
+
+
+        progress_data[data] = json.load(open(os.path.join(progress_data_folder, f"{data}.json"), "r"))
+
+        annotation = [(elem, len(trajectories)-1) for elem in progress_data[data]]
+        annotation_list.extend(annotation)
     
+    return trajectories, annotation_list
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

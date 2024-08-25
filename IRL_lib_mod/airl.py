@@ -47,6 +47,12 @@ class AIRL(common.AdversarialTrainer):
         shaping_lr: float = 1e-3,
         save_model_every = 20,
         save_path = "checkpoints/default",
+        use_online_data: bool = False,
+        demonstration_online_data: Optional[Iterable[types.Trajectory]] = None,
+        online_annotation_list: Optional[list[tuple[int, dict]]] = None,
+        online_shaping_batch_size: int = 16,
+        online_shaping_loss_weight: float = 1.0,
+        online_shaping_update_freq: int = 1,
         **kwargs,
     ):
         """Builds an AIRL trainer.
@@ -89,6 +95,14 @@ class AIRL(common.AdversarialTrainer):
         self.save_path = save_path 
         self.project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
         self.save_path = os.path.join(self.project_path, self.save_path)
+        
+        self.use_online_data = use_online_data
+        self.demonstration_online_data = demonstration_online_data
+        self.online_annotation_list = online_annotation_list
+
+        self.online_shaping_batch_size = online_shaping_batch_size
+        self.online_shaping_loss_weight = online_shaping_loss_weight
+        self.online_shaping_update_freq = online_shaping_update_freq
         if not os.path.exists(self.save_path):
             print("creating save path")
             os.makedirs(self.save_path)
@@ -149,17 +163,19 @@ class AIRL(common.AdversarialTrainer):
         reward_output_train = self._reward_net(state, action, next_state, done)
         return reward_output_train - log_policy_act_prob
 
-    def progress_shaping_loss(self) -> th.Tensor:
+    def progress_shaping_loss(self, 
+                              demonstrations, 
+                              annotation_list) -> th.Tensor:
 
         '''
         get progress from annotations and compute the progress shaping loss
         '''
         # randomly choose some demonstrations from annotation_list
         # randomly generate a batch of indices
-        indices = np.random.choice(len(self.annotation_list), self.shaping_batch_size , replace=False)
+        indices = np.random.choice(len(annotation_list), self.shaping_batch_size , replace=False)
         threshold = 0.1
         # get corresponding annotations
-        annotations = [self.annotation_list[idx] for idx in indices]
+        annotations = [annotation_list[idx] for idx in indices]
 
         # get the progress change from annotations
         # print("type check",type(annotations[0][0]["start_progress"]))
@@ -172,11 +188,11 @@ class AIRL(common.AdversarialTrainer):
 
         # get corresponding states and actions
         demostration_indicies = [(annotation[1], annotation[0]["start_step"], annotation[0]["end_step"]) for annotation in annotations]
-        states = [th.tensor(self.demonstrations_for_shaping[demostration_index].obs[start_step:end_step], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
-        actions = [th.tensor(self.demonstrations_for_shaping[demostration_index].acts[start_step:end_step], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
+        states = [th.tensor(demonstrations[demostration_index].obs[start_step:end_step], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
+        actions = [th.tensor(demonstrations[demostration_index].acts[start_step:end_step], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
         
-        next_states = [th.tensor(self.demonstrations_for_shaping[demostration_index].obs[start_step+1:end_step+1], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
-        dones = [int(self.demonstrations_for_shaping[demostration_index].terminal) for demostration_index, _, end_step in demostration_indicies]
+        next_states = [th.tensor(demonstrations[demostration_index].obs[start_step+1:end_step+1], dtype=th.float32) for demostration_index, start_step, end_step in demostration_indicies]
+        dones = [int(demonstrations[demostration_index].terminal) for demostration_index, _, end_step in demostration_indicies]
 
         # record corresponding index for each part of the batch
         state_lengths = th.tensor([len(state) for state in states])
@@ -380,7 +396,9 @@ class AIRL(common.AdversarialTrainer):
             # reward shaping loss
             if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
                 self._disc_opt.zero_grad()
-                shaping_losses = self.progress_shaping_loss()
+                shaping_losses = self.progress_shaping_loss(
+                    self.demonstrations_for_shaping, self.annotation_list
+                )
                 # get the losses in self.shape_reward list using keys, sum them
                 shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
                 # print(shaping_loss)
@@ -388,17 +406,14 @@ class AIRL(common.AdversarialTrainer):
                 shaping_loss.backward()
                 self._disc_opt.step()
 
-                # relase unused loss
-                # del shaping_losses
-
-
-                # if "progress_sign_loss" in self.shape_reward and self._disc_step % self.shaping_update_freq == 0:
-                #     self._disc_opt.zero_grad()
-                #     shaping_loss = self.progress_shaping_loss()
-                #     print(shaping_loss)
-                #     shaping_loss *= self.shaping_loss_weight
-                #     shaping_loss.backward()
-                #     self._disc_opt.step()
+            # online reward shaping loss
+            if self.use_online_data and self._disc_step % self.online_shaping_update_freq == 0:
+                self._disc_opt.zero_grad()
+                shaping_losses = self.progress_shaping_loss(self.demonstration_online_data, self.online_annotation_list)
+                shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
+                shaping_loss *= self.online_shaping_loss_weight
+                shaping_loss.backward()
+                self._disc_opt.step()
 
             # compute/write stats and TensorBoard data
             with th.no_grad():
