@@ -6,6 +6,7 @@ from stable_baselines3.ppo import MlpPolicy
 
 # from imitation.algorithms.adversarial.airl import AIRL
 from IRL_lib_mod.airl import AIRL
+from imitation.algorithms.adversarial.airl import AIRL as AIRL_old
 from imitation.data import rollout
 from imitation.data.wrappers import RolloutInfoWrapper
 from envs.wrappers import SequentialObservationWrapper
@@ -26,6 +27,33 @@ import torch
 
 import argparse
 
+from stable_baselines3.common.callbacks import BaseCallback
+import numpy as np
+
+print_cnt = 0
+
+class CustomLoggingPolicy(MlpPolicy):
+    def forward(self, obs: torch.Tensor, deterministic: bool = False):
+        global print_cnt
+        print_cnt += 1
+
+            # Get the action, value, and log probability from the parent class
+        actions, values, log_probs = super().forward(obs, deterministic)
+        if print_cnt % 2000 == 0:
+            print(f"Actions: {actions[-1].detach().cpu().numpy()}")
+                        # Convert actions to NumPy for easier processing
+            actions_np = actions.detach().cpu().numpy()
+            # Update total actions and count of positive last elements
+
+            positive_last = np.sum(actions_np[:, -1] > 0)
+            ratio = positive_last / actions_np.shape[0]
+            print(f"Positive ratio: {ratio}")
+
+        # Log the actions (you can adjust the logging as needed)
+        
+        
+        # Return the outputs as usual
+        return actions, values, log_probs
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -64,7 +92,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=False,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=1000,                            # each episode terminates after 300 steps
+        horizon=750,                            # each episode terminates after 300 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -108,7 +136,8 @@ if __name__ == "__main__":
                                             make_sequential_obs=make_sequential_obs,
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
-                                         use_half_gripper_obs=True)
+                                         use_half_gripper_obs=True
+                                         )
     
     for i in range(len(trajs)):
         if trajs[i].obs.shape[1] != 31:
@@ -123,8 +152,8 @@ if __name__ == "__main__":
                                          use_half_gripper_obs=True)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    shape_reward = ["progress_sign_loss", "delta_progress_scale_loss"]
-    # shape_reward = []
+    #shape_reward = ["advantage_sign_loss"]
+    shape_reward = []
 
     for i in range(len(trajs_for_shaping)):
         if trajs_for_shaping[i].obs.shape[1] != 31:
@@ -132,12 +161,13 @@ if __name__ == "__main__":
                                                                   
     learner = PPO(
         env=envs,
-        policy=MlpPolicy,
-        batch_size=128,
-        ent_coef=0.00,
+        policy=CustomLoggingPolicy,  # Use your custom policy here
+        #policy=MlpPolicy,
+        batch_size=1024,
+        ent_coef=0.01,
         learning_rate=3e-4,
-        gamma=0.95,
-        clip_range=0.4,
+        gamma=0.99,
+        clip_range=0.2,
         vf_coef=0.5,
         n_epochs=10,
         seed=SEED,
@@ -146,8 +176,11 @@ if __name__ == "__main__":
         observation_space=envs.observation_space,
         action_space=envs.action_space,
         normalize_input_layer=RunningNorm,
+        reward_hid_sizes=(64, 64),
+        potential_hid_sizes=(64, 64),
     )
     generator_model_path = f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/gen_policy/model"
+    print(args.continue_training)
     if args.continue_training:
         reward_net = (torch.load(f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/reward_train.pt"))
         learner = PPO.load(generator_model_path)
@@ -155,9 +188,9 @@ if __name__ == "__main__":
     logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
     airl_trainer = AIRL(
         demonstrations=trajs,
-        demo_batch_size=512,
-        gen_replay_buffer_capacity=50000,
-        n_disc_updates_per_round=8,
+        demo_batch_size=128,
+        gen_replay_buffer_capacity=20000,
+        n_disc_updates_per_round=4,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
@@ -166,8 +199,6 @@ if __name__ == "__main__":
         demostrations_for_shaping=trajs_for_shaping,
         custom_logger = logger,
         save_path = f"checkpoints/{args.exp_name}",
-        # # enable dynamic horizon
-        # dynamic_horizon=True
     )
 
     # loss = airl_trainer.progress_shaping_loss()
@@ -177,22 +208,28 @@ if __name__ == "__main__":
 
     # load the model to continue training
 
-    
 
-    learner_rewards_before_training, _ = evaluate_policy(
-        learner, envs, 12, return_episode_rewards=True,
-    )
+################################################################
+    # check the gripper ever closed
 
-    airl_trainer.train(16_000_000)  # Train for 2_000_000 steps to match expert.
+################################################################    
 
+    # learner_rewards_before_training, _ = evaluate_policy(
+    #     learner, envs, 12, return_episode_rewards=True,
+    # )
+
+    # Train the PPO with the function-based callback that logs actions
+    airl_trainer.train(12_000_000)  # Print actions and rewards during training
+
+#
 # envs.seed(SEED)
-    learner_rewards_after_training, _ = evaluate_policy(
-        learner, envs, 12, return_episode_rewards=True,
-    )
+    # learner_rewards_after_training, _ = evaluate_policy(
+    #     learner, envs, 12, return_episode_rewards=True,
+    # )
 
-    print("mean reward after training:", np.mean(learner_rewards_after_training))
-    print("mean reward before training:", np.mean(learner_rewards_before_training))
-    # save the model
+    # print("mean reward after training:", np.mean(learner_rewards_after_training))
+    # print("mean reward before training:", np.mean(learner_rewards_before_training))
+    # # save the model
     # if not os.path.exists(os.path.join(project_path,f"checkpoints/{args.exp_name}")):
     #     os.makedirs(os.path.join(project_path,f"checkpoints/{args.exp_name}"))
     # train_adversarial.save(airl_trainer, 

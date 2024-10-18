@@ -101,7 +101,7 @@ if __name__ == "__main__":
     annotation_dict = read_all_json("progress_data")
 
     trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
-                                         dataset_path = "human-demo/can-pick/can_low_dim_mh.hdf5", 
+                                         dataset_path = "human-demo/can-pick/can_low_dim_v141.hdf5", 
                                             make_sequential_obs=make_sequential_obs,
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,

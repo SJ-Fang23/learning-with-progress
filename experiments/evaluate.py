@@ -26,6 +26,7 @@ import imitation.scripts.train_adversarial as train_adversarial
 import argparse
 import robosuite as suite
 import torch
+import imageio 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -47,7 +48,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=1000,                            # each episode terminates after 200 steps
+        horizon=1200,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -65,10 +66,11 @@ if __name__ == "__main__":
     reward_net.eval()
     reward_net_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     reward_net.to(reward_net_device)
-
-    evaluate_times = 10
+    video_dir = os.path.join(project_path, "videos", args.exp_name)
+    os.makedirs(video_dir, exist_ok=True)
+    evaluate_times = 5
     obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
-
+    
     
     for i in range(evaluate_times):
         obs = env.reset()
@@ -79,10 +81,14 @@ if __name__ == "__main__":
         cnt = 0
         rewards= 0
         total_disc_rew = 0
+        frames = []
         while not done:
             
-            action, _states = policy.predict(obs, deterministic=True)
+            action, _states = policy.predict(obs)
+            #action, _ = policy.predict(obs, deterministic=True)
             cnt += 1
+            frame = env.render()
+            frames.append(frame)
             obs = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
             obs = obs.cpu().detach().numpy()
             # print("obs", obs)   
@@ -110,10 +116,14 @@ if __name__ == "__main__":
 
             obs = next_obs
             past_action = action
-            print(f"Discriminator Reward: {disc_rew}")
-
+            #print(f"Discriminator Reward: {disc_rew}")
+            # if action[6] > 0:
+            #     print(f"gripper action: {action[6]}")
             env.render()
             if next_done:
                 break
+       # video_path = os.path.join(video_dir, f"episode_{i+1}.mp4")
         print(f"Total Discriminator Reward: {total_disc_rew}")
         print(f"Total Reward: {rewards}")
+        # imageio.mimwrite(video_path, frames, fps=20, codec='libx264')
+        # print(f"Saved video for episode {i+1} at {video_path}")
