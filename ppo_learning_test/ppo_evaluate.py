@@ -32,11 +32,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="default_experiment")
     parser.add_argument('--checkpoint', type=str, default="260")
+    parser.add_argument('--env_name', type=str, default="NutAssemblySquare")
 
     args = parser.parse_args()
 
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
+    if args.env_name == "NutAssemblySquare":
+        dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
+    elif args.env_name == "PickPlaceCan":
+        dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
     
     f= h5py.File(dataset_path,'r')
     env_meta = json.loads(f["data"].attrs["env_args"])
@@ -67,15 +71,15 @@ if __name__ == "__main__":
 # )
 
     env = suite.make(
-        "PickPlaceCanModified",
+        args.env_name,
         **make_env_kwargs,
     )
     env = GymWrapper(env, keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
     policy = PPO.load(f"{project_path}/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model", env=env)
-    reward_net = (torch.load(f"{project_path}/checkpoints/disc_128/300/reward_train.pt"))
-    reward_net.eval()
-    reward_net_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    reward_net.to(reward_net_device)
+    # reward_net = (torch.load(f"{project_path}/checkpoints/disc_128/300/reward_train.pt"))
+    # reward_net.eval()
+    # reward_net_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # reward_net.to(reward_net_device)
     # estimate_reward = evaluate_policy(policy, env, n_eval_episodes=10)
     # estimate_reward = np.mean(estimate_reward)
     # print(f"Estimated Reward: {estimate_reward}")

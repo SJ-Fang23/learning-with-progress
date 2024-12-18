@@ -47,25 +47,27 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         env_name=env_name,
         **env_kwargs
     )
-
+    replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
+                            # set json data folder
+    data_folder = "nut_assembly_square_mh"
     # check if dataset is mh by checking if mh is in the file name
-    is_mh = "mh" in dataset_path
-    if is_mh:
-        # get demo keys with different quality
-        replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
-        # set json data folder
-        data_folder = "progress_data_mh"
-    else:
-        # get demo keys
-        filter_key = "train"
-        demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
-        # print(demo_keys)
-        # get demo keys to replay
-        print("replay_demo:",reply_demo_indicies)  
-        replay_demo_keys = ["demo_{}".format(i) for i in reply_demo_indicies if "demo_{}".format(i) in demo_keys]
-        # print(replay_demo_keys)
-        # set json data folder
-        data_folder = "progress_data_ph"
+    # is_mh = "mh" in dataset_path
+    # if is_mh:
+    #     # get demo keys with different quality
+    #     replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
+    #     # set json data folder
+    #     data_folder = "progress_data_mh"
+    # else:
+    #     # get demo keys
+    #     filter_key = "train"
+    #     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+    #     # print(demo_keys)
+    #     # get demo keys to replay
+    #     print("replay_demo:",reply_demo_indicies)  
+    #     replay_demo_keys = ["demo_{}".format(i) for i in reply_demo_indicies if "demo_{}".format(i) in demo_keys]
+    #     # print(replay_demo_keys)
+    #     # set json data folder
+    #     data_folder = "progress_data_ph"
 
     # replay demo, pause given times and collect progress data
     progress_data = dict()
@@ -219,11 +221,11 @@ def replay_trajectory_and_collect_preference(dataset_path:str,
 
     # make environments, we make two envs since the preference collection need to watch 
     # two demos at same time
-    env_1:PickPlaceCan = suite.make(
+    env_1 = suite.make(
         env_name=env_name,
         **env_kwargs
     )
-    env_2:PickPlaceCan = suite.make(
+    env_2 = suite.make(
         env_name=env_name,
         **env_kwargs
     )
@@ -362,16 +364,16 @@ def display_images(img_list, window_name, fps=20):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # parser.add_argument("--dataset_path", type=str, default="can-pick/low_dim_v141.hdf5")
-    parser.add_argument("--dataset_path", type=str, default="can-pick/can_low_dim_mh.hdf5")
+    parser.add_argument("--dataset_path", type=str, default="square/low_dim_v141.hdf5")
 
     parser.add_argument("--replay_demo_numbers", type=int, nargs="+", default=[1])
-    parser.add_argument("--collect_progress_times", type=int, default=10)
+    parser.add_argument("--collect_progress_times", type=int, default=20)
     # parser.add_argument
     args = parser.parse_args()
     print(args.replay_demo_numbers)
     # replay_trajectory_and_collect_preference(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)
     replay_trajectory_and_collect_progress(
-        "can-pick/can_low_dim_mh.hdf5", 
+        "square/low_dim_v141.hdf5", 
         [],
         10,
         30,

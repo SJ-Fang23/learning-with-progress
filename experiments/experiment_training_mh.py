@@ -92,7 +92,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=False,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=750,                            # each episode terminates after 300 steps
+        horizon=500,                            # each episode terminates after 300 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -152,7 +152,7 @@ if __name__ == "__main__":
                                          use_half_gripper_obs=True)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    #shape_reward = ["advantage_sign_loss"]
+    #shape_reward = ["progress_sign_loss", "value_sign_loss", "advantage_sign_loss"]
     shape_reward = []
 
     for i in range(len(trajs_for_shaping)):
@@ -163,10 +163,10 @@ if __name__ == "__main__":
         env=envs,
         policy=CustomLoggingPolicy,  # Use your custom policy here
         #policy=MlpPolicy,
-        batch_size=1024,
+        batch_size=256,
         ent_coef=0.01,
         learning_rate=3e-4,
-        gamma=0.99,
+        gamma=0.95,
         clip_range=0.2,
         vf_coef=0.5,
         n_epochs=10,
@@ -180,7 +180,6 @@ if __name__ == "__main__":
         potential_hid_sizes=(64, 64),
     )
     generator_model_path = f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/gen_policy/model"
-    print(args.continue_training)
     if args.continue_training:
         reward_net = (torch.load(f"{project_path}/checkpoints/{args.load_exp_name}/{args.checkpoint}/reward_train.pt"))
         learner = PPO.load(generator_model_path)

@@ -31,10 +31,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="ppo_experiment")
     parser.add_argument('--checkpoint', type=str, default="")
+    parser.add_argument('--env_name', type=str, default="NutAssemblySquare")
 
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
+    if args.env_name == "NutAssemblySquare":
+        dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
+    elif args.env_name == "PickPlaceCan":
+        dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
     
     f= h5py.File(dataset_path,'r')
     env_meta = json.loads(f["data"].attrs["env_args"])
@@ -47,7 +51,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=1000,                            # each episode terminates after 200 steps
+        horizon=500,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -60,7 +64,7 @@ if __name__ == "__main__":
     #     **make_env_kwargs,
     # )
     envs = make_vec_env_robosuite(
-        "PickPlaceCan",
+        args.env_name,
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
         n_envs=12,
@@ -72,7 +76,7 @@ if __name__ == "__main__":
     learner = PPO(
         env=envs,
         policy=MlpPolicy,
-        batch_size=128,
+        batch_size=256,
         ent_coef=0.00,
         learning_rate=3e-4,
         gamma=0.99,
@@ -100,10 +104,10 @@ if __name__ == "__main__":
     for i in range(start, training_round):
         
         learner.learn(total_timesteps=traning_time)
-        if i % 100 == 0:
+        if i % 20 == 0:
             learner.save(f"{project_path}/checkpoints/{args.exp_name}/"+str(i)+"/gen_policy/model")
-        learner_rewards = evaluate_policy(learner, envs, n_eval_episodes=10)
-        print("mean reward at round", i, ":", np.mean(learner_rewards))
+            learner_rewards = evaluate_policy(learner, envs, n_eval_episodes=10)
+            print("mean reward at round", i, ":", np.mean(learner_rewards))
         with open(record_file, "a") as f:
             f.write("mean reward at round " + str(i) + ":" + str(np.mean(learner_rewards)) + "\n")
         f.close()

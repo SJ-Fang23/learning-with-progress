@@ -24,8 +24,8 @@ def replay_demo(dataset_path: str):
     env_kwargs = json.loads(f["data"].attrs["env_args"])["env_kwargs"]
     env_kwargs["has_renderer"] = True
 
-    env:PickPlaceCan = suite.make(
-        env_name="PickPlaceCan",
+    env= suite.make(
+        env_name="NutAssemblySquare",
         **env_kwargs,
     )
     env = GymWrapper(env,["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
@@ -65,5 +65,5 @@ def replay_demo(dataset_path: str):
 
 
 if __name__ == "__main__":
-    dataset_path = "can-pick/low_dim_v141.hdf5"
+    dataset_path = "square/low_dim_v141.hdf5"
     replay_demo(dataset_path)

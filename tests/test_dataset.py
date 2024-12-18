@@ -5,8 +5,8 @@ import robosuite as suite
 from envs.pickplace import*
 import numpy as np
 from robosuite.controllers import load_controller_config
-project_path = os.path.dirname(os.path.abspath(__file__))
-dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
+project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
 print(dataset_path)
 f = h5py.File(dataset_path,'r')
 
@@ -17,9 +17,9 @@ with open(config_path, 'r') as cfg_file:
 controller_config = load_controller_config(default_controller="OSC_POSE")
 env_meta = json.loads(f["data"].attrs["env_args"])
 print("env_meta: ",env_meta)
-
-env:PickPlaceCan = suite.make(
-    env_name="PickPlaceCan",
+# set env to robosuite square
+env =  suite.make(
+    env_name="NutAssemblySquare",
     robots="Panda",             # load a Sawyer robot and a Panda robot
     gripper_types="default",                # use default grippers per robot arm
     controller_configs=env_meta["env_kwargs"]["controller_configs"],   # each arm is controlled using OSC
@@ -29,8 +29,23 @@ env:PickPlaceCan = suite.make(
     control_freq=20,                        # 20 hz control for applied actions
     horizon=200,                            # each episode terminates after 200 steps
     use_object_obs=True,                   # no observations needed
-    use_camera_obs=False, 
+    use_camera_obs=False,
+    reward_shaping=True,
+
 )
+# env:PickPlaceCan = suite.make(
+#     env_name="PickPlaceCan",
+#     robots="Panda",             # load a Sawyer robot and a Panda robot
+#     gripper_types="default",                # use default grippers per robot arm
+#     controller_configs=env_meta["env_kwargs"]["controller_configs"],   # each arm is controlled using OSC
+#     has_renderer=True,                      # on-screen rendering
+#     render_camera="frontview",              # visualize the "frontview" camera
+#     has_offscreen_renderer=False,           # no off-screen rendering
+#     control_freq=20,                        # 20 hz control for applied actions
+#     horizon=200,                            # each episode terminates after 200 steps
+#     use_object_obs=True,                   # no observations needed
+#     use_camera_obs=False, 
+# )
 # print(**env_meta["env_kwargs"])
 
 print(configs)
@@ -70,14 +85,9 @@ obs = env.reset()
 # #     obs,_,_,_ = env.step(action)
 # #     env.render()
 
-action = np.zeros(7)
-obs,_,_,_ = env.step(action)
-print(obs.keys())
-print(obs["object-state"])
-
 # # state_array = np.array(f["data"]["demo_0"]["obs"]["robot0_eef_pos"])
-# for i in range(len(f["data"]["demo_0"]["actions"])):
-#     action = np.array(f["data"]["demo_0"]["actions"][i])
-#     # action = np.concatenate([state_array[i],np.array([0])])
-#     obs,_,_,_ = env.step(action)
-#     env.render()
+for i in range(len(f["data"]["demo_0"]["actions"])):
+    action = np.array(f["data"]["demo_0"]["actions"][i])
+    # action = np.concatenate([state_array[i],np.array([0])])
+    obs,_,_,_ = env.step(action)
+    env.render()
