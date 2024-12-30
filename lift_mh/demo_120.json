@@ -1,0 +1,38 @@
+[
+    {
+        "start_step": 0,
+        "end_step": 12,
+        "start_progress": 0,
+        "end_progress": 15.0
+    },
+    {
+        "start_step": 12,
+        "end_step": 24,
+        "start_progress": 15.0,
+        "end_progress": 20.0
+    },
+    {
+        "start_step": 24,
+        "end_step": 36,
+        "start_progress": 20.0,
+        "end_progress": 40.0
+    },
+    {
+        "start_step": 36,
+        "end_step": 48,
+        "start_progress": 40.0,
+        "end_progress": 45.0
+    },
+    {
+        "start_step": 48,
+        "end_step": 60,
+        "start_progress": 45.0,
+        "end_progress": 60.0
+    },
+    {
+        "start_step": 60,
+        "end_step": 72,
+        "start_progress": 60.0,
+        "end_progress": 90.0
+    }
+]
