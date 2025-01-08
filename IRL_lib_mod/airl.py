@@ -383,8 +383,12 @@ class AIRL(common.AdversarialTrainer):
                 shaping_losses = self.progress_shaping_loss()
                 # get the losses in self.shape_reward list using keys, sum them
                 shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
+                print("************************************************************")
+                for key in self.shape_reward:
+                    print(key, shaping_losses[key])
+                print("************************************************************")
                 # print(shaping_loss)
-                shaping_loss *= self.shaping_loss_weight
+                #shaping_loss *= self.shaping_loss_weight
                 shaping_loss.backward()
                 self._disc_opt.step()
 
