@@ -262,7 +262,7 @@ class AIRL(common.AdversarialTrainer):
                            delta_progress: th.tensor, 
                            reward_output_train: th.tensor) -> th.tensor:
         # loss should be difference in the sign of delta_progress and reward_output_train
-        sign_agreement = (th.sign(delta_progress).to(self.gen_algo.device)) * (th.sign(reward_output_train))
+        sign_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(reward_output_train))
         loss = th.mean(th.relu(-sign_agreement))
         return loss
     
@@ -277,7 +277,7 @@ class AIRL(common.AdversarialTrainer):
 
         # we want reward_output_train_diff to be larger when delta_progress_diff is larger
         # idea is that if delta_progress_diff > 0, then reward_output_train_diff > 0
-        loss = th.mean(th.relu(-th.sign(delta_progress_diff * reward_output_train_diff)))
+        loss = th.mean(th.relu(-F.softsign(delta_progress_diff * reward_output_train_diff)))
         return loss
     
     def progress_value_loss(self, 
