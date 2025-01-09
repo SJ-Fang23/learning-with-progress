@@ -163,7 +163,7 @@ class AIRL(common.AdversarialTrainer):
 
         # get the progress change from annotations
         # print("type check",type(annotations[0][0]["start_progress"]))
-        delta_progress = th.tensor(annotation[0]["end_progress" ]  - [annotation[0]["start_progress"] -  threshold for annotation in annotations])
+        delta_progress = th.tensor([annotation[0]["end_progress" ]  - annotation[0]["start_progress"] -  threshold for annotation in annotations])
         # print("what is this",annotations[0][0])
         #progress = th.tensor([annotation[0]["end_progress"] for annotation in annotations])
 
