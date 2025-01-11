@@ -91,6 +91,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         progress = [0]
         print(f"replaying demo: {key}, length: {len(actions)}")
         # replay demo
+        cnt = 0
         for i in range(len(actions)):
             action = actions[i]
             # obs = obs[i]
@@ -108,9 +109,10 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
             
             # pause and collect progress data
             if i in pause_indices:
+                cnt += 1
                 progress_data[key] = progress_data.get(key, [])
                 # get user input
-                user_input = input("Please input the progress data: ")
+                user_input = input("Please input the progress data " + str(cnt) + " :")
                 # user input must be a float, otherwise ask user to input again
                 while not user_input.replace(".", "").isdigit():
                     user_input = input("Please input the progress data: ")
@@ -373,7 +375,7 @@ if __name__ == "__main__":
     print(args.replay_demo_numbers)
     # replay_trajectory_and_collect_preference(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)
     replay_trajectory_and_collect_progress(
-        "square/low_dim_v141.hdf5", 
+        "lift/low_dim_v141.hdf5", 
         [],
         10,
         30,
