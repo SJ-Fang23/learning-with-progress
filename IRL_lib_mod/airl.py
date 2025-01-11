@@ -192,6 +192,16 @@ class AIRL(common.AdversarialTrainer):
         next_states = th.cat(next_states)
         dones = th.tensor(dones, dtype=th.float32)
 
+        # length check
+        if len(states)!= len(next_states) or len(states) != len(actions):
+            # reduce the length of states by the minimum length
+            min_length = min(len(states), len(next_states), len(actions))
+            states = states[:min_length]
+            actions = actions[:min_length]
+            next_states = next_states[:min_length]
+            dones = dones[:min_length]
+    
+
         # to device
         states = states.to(self.gen_algo.device)
         actions = actions.to(self.gen_algo.device)
