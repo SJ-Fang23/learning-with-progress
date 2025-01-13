@@ -196,7 +196,12 @@ if __name__ == "__main__":
         learner = PPO.load(generator_model_path)
     # logger that write tensroborad to logs dir
     logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
-    shape_reward = []
+    shape_reward = [
+        "demo_range_loss",
+        "progress_regression_loss",
+        "progress_head_loss",
+        "progress_regularization",
+    ]
     airl_trainer = AIRL(
         demonstrations=trajs,
         demo_batch_size=128,

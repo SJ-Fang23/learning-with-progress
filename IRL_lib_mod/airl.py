@@ -209,17 +209,19 @@ class AIRL(common.AdversarialTrainer):
         dones = dones.to(self.gen_algo.device)
 
         # get the reward output from the reward network
-        reward_output_train = self._reward_net.base(states, actions, next_states, dones)
-        v_s = self._reward_net.potential(states)
-        v_s_next = self._reward_net.potential(next_states)
-        delta_value = v_s_next - v_s
-        advatanage_output = th.tensor([0.0 for i in range(len(states))])
-        advatanage_output = self._reward_net(states, actions, next_states, th.tensor(1))
+        with th.no_grad():
+        
+            reward_output_train = self._reward_net.base(states, actions, next_states, dones)
+            v_s = self._reward_net.potential(states)
+            v_s_next = self._reward_net.potential(next_states)
+            delta_value = v_s_next - v_s
+            advatanage_output = th.tensor([0.0 for i in range(len(states))])
+            advatanage_output = self._reward_net(states, actions, next_states, th.tensor(1))
 
 
-        # get the value output from the potential part of reward network
-        old_value_output_train = self._reward_net.potential(states).flatten()
-        next_value_output_train = self._reward_net.potential(next_states).flatten()
+            # get the value output from the potential part of reward network
+            old_value_output_train = self._reward_net.potential(states).flatten()
+            next_value_output_train = self._reward_net.potential(next_states).flatten()
 
 
         # sum the reward output for each trajectory
