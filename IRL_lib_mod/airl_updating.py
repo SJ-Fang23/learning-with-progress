@@ -47,6 +47,7 @@ class AIRL(common.AdversarialTrainer):
         shaping_lr: float = 1e-3,
         save_model_every = 20,
         save_path = "checkpoints/default",
+        traj_index = [], 
         **kwargs,
     ):
         """Builds an AIRL trainer.
@@ -89,6 +90,7 @@ class AIRL(common.AdversarialTrainer):
         self.save_path = save_path 
         self.project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) 
         self.save_path = os.path.join(self.project_path, self.save_path)
+        self.traj_index = traj_index
         if not os.path.exists(self.save_path):
             print("creating save path")
             os.makedirs(self.save_path)
@@ -160,10 +162,11 @@ class AIRL(common.AdversarialTrainer):
         threshold = 0.1
         # get corresponding annotations
         annotations = [self.annotation_list[idx] for idx in indices]
-
+        #print("indices", indices)
         # get the progress change from annotations
         # print("type check",type(annotations[0][0]["start_progress"]))
         delta_progress = th.tensor([annotation[0]["end_progress" ]  - annotation[0]["start_progress"] -  threshold for annotation in annotations])
+        #print("delta_progress", delta_progress)
         # print("what is this",annotations[0][0])
         #progress = th.tensor([annotation[0]["end_progress"] for annotation in annotations])
 
@@ -246,17 +249,19 @@ class AIRL(common.AdversarialTrainer):
         old_value_output_train = old_value_output_train.to(self.gen_algo.device)
         next_value_output_train = next_value_output_train.to(self.gen_algo.device)
 
-        loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
+        #loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
         loss_scale = self.delta_progress_scale_loss(delta_progress, reward_output_train)
         loss_value = self.value_sign_loss(delta_progress, delta_value)
         loss_advantage = self.advantage_sign_loss(delta_progress, advatanage_output)
-        loss_progress_value = self.progress_value_loss(average_progress_value, next_value_output_train)
-        #loss_proportion = self.subtrajectory_proportion_loss(indices)
+        loss_progress_value = self.reward_sign_loss(average_progress_value, next_value_output_train)
+        #loss_proportion = self.subtrajectory_proportion_loss()
+        #loss_end_progress = self.end_progress_loss()
 
 
-        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale, 
-                "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, "progress_value_loss": loss_progress_value,
-                #"subtrajectory_proportion_loss": loss_proportion,
+        return {"delta_progress_scale_loss": loss_scale, 
+                "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, "reward_sign_loss": loss_progress_value,
+                "subtrajectory_proportion_loss": loss_proportion,
+                "end_progress_loss": loss_end_progress
                 }
 
         
@@ -297,8 +302,72 @@ class AIRL(common.AdversarialTrainer):
         # idea is that if delta_progress_diff > 0, then reward_output_train_diff > 0
         loss = th.mean(th.relu(-F.softsign(delta_progress_diff * reward_output_train_diff)))
         return loss
+    def end_progress_loss(self,) -> th.Tensor:
+        '''for a trajectory, if the progress in the end is 100, then the total reward for the trajectory should be higher than 
+        the other trajectories with end progress less than 90 for at least 5%.
+        If the difference is less 10, then the difference in reward should be less than 10%.
+        
+        '''
+        device = self.gen_algo.device
+        if len(self.demonstrations_for_shaping) == 0:
+            return th.tensor(0.0, device=device)
+
+        
+        # select four random trajectories from self.traj_index
+        idxs = np.random.choice(self.traj_index, 2, replace=False)
+        all_losses = []
+        end_progress = []
+        end_rewards = []
+        for i in idxs:
+            #only consider the last segment
+            segments = [(ann[0]["start_step"], ann[0]["end_step"], ann[0]["end_progress"])
+                        for ann in self.annotation_list if ann[1] == i]
+            if len(segments) < 2:
+                continue
+            segments.sort(key=lambda x: x[1])
+            end_progress.append(segments[-1][2])
+            # load entire trajectory
+            traj = self.demonstrations_for_shaping[i]
+            T = len(traj.obs)
+            states_all = th.tensor(traj.obs, dtype=th.float32, device=device)
+            actions_all = th.tensor(traj.acts, dtype=th.float32, device=device)
+            next_all = th.tensor(traj.obs, dtype=th.float32, device=device)
+            dones_all = th.zeros(T, dtype=th.float32, device=device)
+            # match the length for all tensors
+            if len(states_all) != len(next_all) or len(states_all) != len(actions_all):
+                # reduce the length of states by the minimum length
+                min_length = min(len(states_all), len(next_all), len(actions_all))
+                states_all = states_all[:min_length]
+                actions_all = actions_all[:min_length]
+                next_all = next_all[:min_length]
+                dones_all = dones_all[:min_length]
+
+            all_rews = self._reward_net.base(states_all, actions_all, next_all, dones_all)
+            total_reward = all_rews.sum().item()
+            end_rewards.append(total_reward)
     
-    def subtrajectory_proportion_loss(self, idxs) -> th.Tensor:
+        # then compare the end progress and end rewards
+        for i in range(len(idxs)):
+            for j in range(i+1, len(idxs)):
+                if abs(end_progress[i] - end_progress[j]) < 10:
+                    if abs(end_rewards[i] - end_rewards[j]) > 0.1 * max(end_rewards[i], end_rewards[j]):
+                        all_losses.append(abs(end_rewards[i] - end_rewards[j])/max(end_rewards[i], end_rewards[j]))
+                    else:
+                        pass
+                else:
+                    if max(end_rewards[i], end_rewards[j]) - min(end_rewards[i], end_rewards[j]) > 0.05 * max(end_rewards[i], end_rewards[j]):
+                        pass
+                    else:
+                        all_losses.append(max(end_rewards[i], end_rewards[j]) - min(end_rewards[i], end_rewards[j]) / 0.05 * max(end_rewards[i], end_rewards[j]))
+
+        if len(all_losses) == 0:
+            return th.tensor(0.0, device=device)
+        return th.tensor(np.mean(all_losses), dtype=th.float32, device=device)
+
+
+
+    
+    def subtrajectory_proportion_loss(self) -> th.Tensor:
         """
         For a trajectory divided into subtrajectories [1..K], if sub7 ends at ~70% progress,
         then the sum of rewards up to sub7 should be ~70% of the total sum of rewards.
@@ -309,9 +378,11 @@ class AIRL(common.AdversarialTrainer):
         """
         device = self.gen_algo.device
         if len(self.demonstrations_for_shaping) == 0:
+            print("problem here")
             return th.tensor(0.0, device=device)
 
-        #idxs = np.random.choice(len(self.demonstrations_for_shaping), self.shaping_batch_size, replace=True)
+        # select two random trajectories from self.traj_index
+        idxs = np.random.choice(self.traj_index, 2, replace=False)
         all_losses = []
 
         for i in idxs:
@@ -330,13 +401,18 @@ class AIRL(common.AdversarialTrainer):
             T = len(traj.obs)
             states_all = th.tensor(traj.obs, dtype=th.float32, device=device)
             actions_all = th.tensor(traj.acts, dtype=th.float32, device=device)
-            next_all = th.tensor(traj.obs[1:], dtype=th.float32, device=device)
-            if len(next_all) < T:
-                next_all = th.cat([next_all, next_all[-1:].clone()], dim=0)
+            next_all = th.tensor(traj.obs, dtype=th.float32, device=device)
             dones_all = th.zeros(T, dtype=th.float32, device=device)
-
-            with th.no_grad():
-                all_rews = self._reward_net.base(states_all, actions_all, next_all, dones_all)
+            # match the length for all tensors
+            if len(states_all) != len(next_all) or len(states_all) != len(actions_all):
+                # reduce the length of states by the minimum length
+                min_length = min(len(states_all), len(next_all), len(actions_all))
+                states_all = states_all[:min_length]
+                actions_all = actions_all[:min_length]
+                next_all = next_all[:min_length]
+                dones_all = dones_all[:min_length]
+            
+            all_rews = self._reward_net.base(states_all, actions_all, next_all, dones_all)
 
             total_reward = all_rews.sum().item()
             final_progress = segments[-1][2]  # the last segment's end_progress
@@ -353,15 +429,21 @@ class AIRL(common.AdversarialTrainer):
                 sub_r = all_rews[: en].sum().item()
                 # proportion of progress = seg_prog / final_progress
                 # proportion of rewards = sub_r / total_reward
-                prop_prog = seg_prog / final_progress
-                prop_rew = sub_r / (total_reward + 1e-8)
+                # prop_prog = seg_prog / final_progress
+                # prop_rew = sub_r / (total_reward + 1e-8)
+                # in torch operations
+                prop_prog = th.tensor(seg_prog / final_progress, dtype=th.float32, device=device)
+                prop_rew = th.tensor(sub_r / (total_reward + 1e-8), dtype=th.float32, device=device)
+
+                prop_prog = th.tensor(prop_prog, dtype=th.float32, device=device)
+                prop_rew = th.tensor(prop_rew, dtype=th.float32, device=device)
                 # measure how far we are from matching
                 # e.g. L1 difference
-                diff = abs(prop_prog - prop_rew)
+                diff = th.abs(prop_prog - prop_rew)
                 partial_rew_sums.append(diff)
 
             # average difference across segments
-            demo_loss = np.mean(partial_rew_sums)
+            demo_loss = th.mean(th.stack(partial_rew_sums))
             all_losses.append(demo_loss)
 
         if len(all_losses) == 0:

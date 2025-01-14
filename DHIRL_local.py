@@ -5,7 +5,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.ppo import MlpPolicy
 
 # from imitation.algorithms.adversarial.airl import AIRL
-from IRL_lib_mod.airl_gpt import AIRLWithProgress as AIRL
+from IRL_lib_mod.airl_updating import AIRL
 from imitation.algorithms.adversarial.airl import AIRL as AIRL_old
 from imitation.data import rollout
 from imitation.data.wrappers import RolloutInfoWrapper
@@ -165,10 +165,11 @@ if __name__ == "__main__":
     # change this to enable or disable reward shaping
     #shape_reward = ["progress_sign_loss", "value_sign_loss", "advantage_sign_loss"]
     
-
+    traj_index = []
     for i in range(len(trajs_for_shaping)):
         if trajs_for_shaping[i].obs.shape[1] != 31:
-            print(i)
+            print(trajs_for_shaping[i].obs.shape)
+            traj_index.append(i)
                                                                   
     learner = PPO(
         env=envs,
@@ -196,12 +197,19 @@ if __name__ == "__main__":
         learner = PPO.load(generator_model_path)
     # logger that write tensroborad to logs dir
     logger = imit_logger.configure(folder=log_dir, format_strs=["tensorboard"])
+# all available shaping types are ["value_sign_loss", "advantage_sign_loss", "progress_sign_loss",
+# "delta_progress_scale_loss", "progress_value_loss", "value_sign_loss_alternative",
+# "progress_sign_loss_alternative", "demo_range_loss", "progress_regression_loss", "progress_head_loss",
+# "progress_regularization"]
     shape_reward = [
-        "demo_range_loss",
-        "progress_regression_loss",
-        "progress_head_loss",
-        "progress_regularization",
+        #"demo_range_loss",
+        "delta_progress_scale_loss",
+        "advantage_sign_loss",
+        "value_sign_loss",
+        "reward_sign_loss",
+        "subtrajectory_proportion_loss"
     ]
+    #print("trajectory for shaping:", len(trajs_for_shaping))
     airl_trainer = AIRL(
         demonstrations=trajs,
         demo_batch_size=128,
@@ -212,14 +220,11 @@ if __name__ == "__main__":
         reward_net=reward_net,
         shape_reward = shape_reward,
         annotation_list=annotation_list,
-        demonstrations_for_shaping=trajs_for_shaping,
+        demostrations_for_shaping=trajs_for_shaping,
         custom_logger = logger,
         save_path = f"checkpoints/{args.exp_name}",
         shaping_batch_size=16,
-        shaping_loss_weight=1.0,
-        alpha=1.0,
-        lambda_reg=0.1,
-        progress_head_weight=0.05
+        traj_index = traj_index,
     )
 # trainer = AIRLWithProgress(
 #     demonstrations=my_demos,
