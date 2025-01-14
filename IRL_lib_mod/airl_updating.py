@@ -269,7 +269,7 @@ class AIRL(common.AdversarialTrainer):
     def advantage_sign_loss(self,
                      delta_progress: th.tensor,
                         delta_advantage: th.tensor) -> th.tensor:
-        advantage_agreement = (th.sign(delta_progress).to(self.gen_algo.device)) * (th.sign(delta_advantage).to(self.gen_algo.device))
+        advantage_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(delta_advantage).to(self.gen_algo.device))
         loss = th.mean(th.relu(-advantage_agreement))
         return loss
     
