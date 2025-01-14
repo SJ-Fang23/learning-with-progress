@@ -260,8 +260,8 @@ class AIRL(common.AdversarialTrainer):
 
         return {"delta_progress_scale_loss": loss_scale, 
                 "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, "reward_sign_loss": loss_progress_value,
-                "subtrajectory_proportion_loss": loss_proportion,
-                "end_progress_loss": loss_end_progress
+               # "subtrajectory_proportion_loss": loss_proportion,
+                #"end_progress_loss": loss_end_progress
                 }
 
         
