@@ -129,9 +129,9 @@ if __name__ == "__main__":
         robosuite_env_name = "Lift"  
     envs = make_vec_env_robosuite(
         robosuite_env_name,
-        obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
+        obs_keys = ["cube_pos","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
-        n_envs=2,
+        n_envs=5,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
@@ -147,12 +147,13 @@ if __name__ == "__main__":
                                             make_sequential_obs=make_sequential_obs,
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
-                                         use_half_gripper_obs=True
+                                         use_half_gripper_obs=True,
+                                         use_cube_pos=True
                                          )
     
-    for i in range(len(trajs)):
-        if trajs[i].obs.shape[1] != 31:
-            print(trajs[i].obs.shape)
+    # for i in range(len(trajs)):
+    #     if trajs[i].obs.shape[1] != 31:
+    #         print(trajs[i].obs.shape)
 
     trajs_for_shaping, annotation_list = load_dataset_and_annotations_simutanously(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
                                                                        annotation_dict=annotation_dict,
@@ -160,15 +161,21 @@ if __name__ == "__main__":
                                                                        make_sequential_obs=make_sequential_obs,
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
-                                         use_half_gripper_obs=True)
+                                         use_half_gripper_obs=True,
+                                         use_cube_pos=True
+                                                                       )
     # type of reward shaping to use
     # change this to enable or disable reward shaping
     #shape_reward = ["progress_sign_loss", "value_sign_loss", "advantage_sign_loss"]
-    
+    # print("**********************************************************")
+    # print(envs.observation_space)
+    # # print trajectory obs shape
+    # print(trajs_for_shaping[0].obs.shape)
+    # print("**********************************************************")
     traj_index = []
     for i in range(len(trajs_for_shaping)):
         if trajs_for_shaping[i].obs.shape[1] != 31:
-            print(trajs_for_shaping[i].obs.shape)
+            #print(trajs_for_shaping[i].obs.shape)
             traj_index.append(i)
                                                                   
     learner = PPO(
@@ -203,16 +210,16 @@ if __name__ == "__main__":
 # "progress_regularization"]
     shape_reward = [
         #"demo_range_loss",
-        "delta_progress_scale_loss",
+        #"delta_progress_scale_loss",
         "advantage_sign_loss",
         "value_sign_loss",
         "reward_sign_loss",
-        "subtrajectory_proportion_loss"
+        #"subtrajectory_proportion_loss"
     ]
     #print("trajectory for shaping:", len(trajs_for_shaping))
     airl_trainer = AIRL(
         demonstrations=trajs,
-        demo_batch_size=128,
+        demo_batch_size=32,
         gen_replay_buffer_capacity=20000,
         n_disc_updates_per_round=10,
         venv=envs,
@@ -225,6 +232,7 @@ if __name__ == "__main__":
         save_path = f"checkpoints/{args.exp_name}",
         shaping_batch_size=16,
         traj_index = traj_index,
+        allow_variable_horizon=True
     )
 # trainer = AIRLWithProgress(
 #     demonstrations=my_demos,
@@ -248,8 +256,8 @@ if __name__ == "__main__":
 # )
     start = 0
     training_time = 1_000_000
-    training_round = 2
-    record_file = "checkpoints/log_files/" + args.exp_name + ".txt"
+    training_round = 50
+    record_file = f"{project_path}/checkpoints/log_files/" + args.exp_name + ".txt"
     import time
     start_time = time.time()
     for i in range(start, training_round):

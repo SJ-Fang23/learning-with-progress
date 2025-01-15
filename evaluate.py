@@ -62,7 +62,7 @@ if __name__ == "__main__":
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     #dataset_path = os.path.join(project_path,"human-demo/" + args.env_name + "/low_dim_v141_" + args.env_name + "_" + args.dataset_type + ".hdf5")
     # dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
-    dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/lift/low_dim_v141_lift_mh.hdf5")
+    dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/lift/low_dim_v141_lift_ph.hdf5")
 
     f= h5py.File(dataset_path,'r')
     env_meta = json.loads(f["data"].attrs["env_args"])
@@ -116,8 +116,8 @@ if __name__ == "__main__":
         frames = []
         while not done:
             
-            action, _states = policy.predict(obs)
-            #action, _ = policy.predict(obs, deterministic=True)
+            #action, _states = policy.predict(obs)
+            action, _ = policy.predict(obs, deterministic=True)
             cnt += 1
             frame = env.render()
             frames.append(frame)

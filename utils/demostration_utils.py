@@ -10,17 +10,39 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
                                  make_sequential_obs:bool = False, 
                                  sequential_obs_keys:Iterable[str] = None, 
                                  obs_seq_len:int = 1, 
-                                 use_half_gripper_obs = True):
+                                 use_half_gripper_obs = True,
+                                 use_cube_pos = False):
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dataset_path = os.path.join(project_path,dataset_path)
     f = h5py.File(dataset_path,'r')
+    # print all obs keys in f
+    #print(f["data/{}/obs".format("train")].keys())
     filter_key = "train"
     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+    #print("all demo keys: ", demo_keys)
     trajectories = []
     for key in demo_keys:
         
         # get the normal not sequential observations part
-        obs = [np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys if not obs_key in sequential_obs_keys]
+        # print all obs keys in f
+        #print(f["data/{}/obs".format(key)].keys())
+        obs = []
+        if use_cube_pos:
+            
+            for obs_key in obs_keys:
+                if obs_key == "object":
+                    # print("************************************************")
+                    # print("use cube pos")
+                    # print(np.array(f["data/{}/obs/{}".format(key, obs_key)][0, 0:3]))
+                    # print(np.array(f["data/{}/obs/{}".format(key, obs_key)][0]))
+                    # print("************************************************")
+                    obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:3]))
+                else:
+                    obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)]))
+
+
+        else:
+            obs = [np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys if not obs_key in sequential_obs_keys]
 
         # get the sequential observations part
         if make_sequential_obs:
@@ -30,6 +52,13 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
                 for obs_key in sequential_obs_keys:
                     if obs_key == "robot0_gripper_qpos":
                         seq_obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:1]))
+                    elif obs_key == "object" and use_cube_pos:
+                        print("************************************************")
+                        print("use cube pos")
+                        print(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:3]))
+                        print(np.array(f["data/{}/obs/{}".format(key, obs_key)][:]))
+                        print("************************************************")
+                        seq_obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:3]))
                     else:
                         seq_obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)]))
             else:
@@ -63,7 +92,8 @@ def load_dataset_and_annotations_simutanously(obs_keys:Iterable[str],
                                                 make_sequential_obs:bool = False, 
                                                 sequential_obs_keys:Iterable[str] = None, 
                                                 obs_seq_len:int = 1, 
-                                                use_half_gripper_obs = True):
+                                                use_half_gripper_obs = True,
+                                                use_cube_pos = False):
 
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dataset_path = os.path.join(project_path,dataset_path)
@@ -77,7 +107,23 @@ def load_dataset_and_annotations_simutanously(obs_keys:Iterable[str],
 
         # load obs
         # get the normal not sequential observations part
-        obs = [np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys if not obs_key in sequential_obs_keys]
+        obs = []
+        if use_cube_pos:
+            
+            for obs_key in obs_keys:
+                if obs_key == "object":
+                    # print("************************************************")
+                    # print("use cube pos")
+                    # print(np.array(f["data/{}/obs/{}".format(key, obs_key)][0, 0:3]))
+                    # print(np.array(f["data/{}/obs/{}".format(key, obs_key)][0]))
+                    # print("************************************************")
+                    obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:3]))
+                else:
+                    obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)]))
+
+
+        else:
+            obs = [np.array(f["data/{}/obs/{}".format(key, obs_key)]) for obs_key in obs_keys if not obs_key in sequential_obs_keys]
 
         # get the sequential observations part
         if make_sequential_obs:
@@ -87,6 +133,13 @@ def load_dataset_and_annotations_simutanously(obs_keys:Iterable[str],
                 for obs_key in sequential_obs_keys:
                     if obs_key == "robot0_gripper_qpos":
                         seq_obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:1]))
+                    elif obs_key == "object" and use_cube_pos:
+                        print("************************************************")
+                        print("use cube pos")
+                        print(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:3]))
+                        print(np.array(f["data/{}/obs/{}".format(key, obs_key)][:]))
+                        print("************************************************")
+                        seq_obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)][:, 0:3]))
                     else:
                         seq_obs.append(np.array(f["data/{}/obs/{}".format(key, obs_key)]))
             else:
