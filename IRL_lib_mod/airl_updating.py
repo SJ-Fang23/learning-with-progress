@@ -581,10 +581,10 @@ class AIRL(common.AdversarialTrainer):
 
                 # Renormalise the loss to be averaged over the whole
                 # batch size instead of the minibatch size.
-                print("loss before:", loss)
+                #print("loss before:", loss)
                 assert len(batch["state"]) == 2 * self.demo_minibatch_size
                 loss *= self.demo_minibatch_size / self.demo_batch_size
-                print("AIRL loss:", loss)
+                #print("AIRL loss:", loss)
                 if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
                 #self._disc_opt.zero_grad()
                     shaping_losses = self.progress_shaping_loss()
