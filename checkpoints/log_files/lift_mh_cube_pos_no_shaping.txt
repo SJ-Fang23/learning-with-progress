@@ -1,0 +1,6 @@
+mean reward at round 0:2.990801906393172
+running time 0 round :00:58:58
+mean reward at round 1:98.34551438381956
+running time 1 round :02:08:31
+mean reward at round 2:94.30791976434759
+running time 2 round :03:21:32

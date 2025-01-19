@@ -421,6 +421,20 @@ class AIRL(common.AdversarialTrainer):
             # optionally write TB summaries for collected ops
             write_summaries = self._init_tensorboard and self._global_step % 20 == 0
 
+            if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
+                self._disc_opt.zero_grad()
+                shaping_losses = self.progress_shaping_loss()
+                # get the losses in self.shape_reward list using keys, sum them
+                shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
+                print("************************************************************")
+                for key in self.shape_reward:
+                    print(key, shaping_losses[key])
+                print("************************************************************")
+                # print(shaping_loss)
+                #shaping_loss *= self.shaping_loss_weight
+                shaping_loss.backward()
+                self._disc_opt.step()
+
             # compute loss
             self._disc_opt.zero_grad()
 
@@ -453,33 +467,8 @@ class AIRL(common.AdversarialTrainer):
             self._disc_step += 1
 
             # reward shaping loss
-            if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
-                self._disc_opt.zero_grad()
-                shaping_losses = self.progress_shaping_loss()
-                # get the losses in self.shape_reward list using keys, sum them
-                shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
-                print("************************************************************")
-                for key in self.shape_reward:
-                    print(key, shaping_losses[key])
-                print("************************************************************")
-                # print(shaping_loss)
-                #shaping_loss *= self.shaping_loss_weight
-                shaping_loss.backward()
-                self._disc_opt.step()
-
-                # relase unused loss
-                # del shaping_losses
 
 
-                # if "progress_sign_loss" in self.shape_reward and self._disc_step % self.shaping_update_freq == 0:
-                #     self._disc_opt.zero_grad()
-                #     shaping_loss = self.progress_shaping_loss()
-                #     print(shaping_loss)
-                #     shaping_loss *= self.shaping_loss_weight
-                #     shaping_loss.backward()
-                #     self._disc_opt.step()
-
-            # compute/write stats and TensorBoard data
             with th.no_grad():
                 train_stats = compute_train_stats(
                     disc_logits,

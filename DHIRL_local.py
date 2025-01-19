@@ -129,9 +129,10 @@ if __name__ == "__main__":
         robosuite_env_name = "Lift"  
     envs = make_vec_env_robosuite(
         robosuite_env_name,
-        obs_keys = ["cube_pos","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
+        obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
-        n_envs=5,
+        n_envs=20,
+        n_envs=20,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
@@ -148,7 +149,7 @@ if __name__ == "__main__":
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
                                          use_half_gripper_obs=True,
-                                         use_cube_pos=True
+                                         #use_cube_pos=True
                                          )
     
     # for i in range(len(trajs)):
@@ -162,7 +163,7 @@ if __name__ == "__main__":
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
                                          use_half_gripper_obs=True,
-                                         use_cube_pos=True
+                                         #use_cube_pos=True
                                                                        )
     # type of reward shaping to use
     # change this to enable or disable reward shaping
@@ -212,16 +213,16 @@ if __name__ == "__main__":
         #"demo_range_loss",
         #"delta_progress_scale_loss",
         "advantage_sign_loss",
-        "value_sign_loss",
-        "reward_sign_loss",
+        #"value_sign_loss",
+        #"reward_sign_loss",
         #"subtrajectory_proportion_loss"
     ]
     #print("trajectory for shaping:", len(trajs_for_shaping))
     airl_trainer = AIRL(
         demonstrations=trajs,
-        demo_batch_size=32,
+        demo_batch_size=64,
         gen_replay_buffer_capacity=20000,
-        n_disc_updates_per_round=10,
+        n_disc_updates_per_round=5,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
