@@ -264,30 +264,82 @@ class AIRL(common.AdversarialTrainer):
                 #"end_progress_loss": loss_end_progress
                 }
 
-        
-
     def advantage_sign_loss(self,
-                     delta_progress: th.tensor,
-                        delta_advantage: th.tensor) -> th.tensor:
-        advantage_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(delta_advantage).to(self.gen_algo.device))
-        loss = th.mean(th.relu(-advantage_agreement))
+                            delta_progress: th.Tensor,
+                            delta_advantage: th.Tensor) -> th.Tensor:
+        """
+        Compare the sign of delta_progress and delta_advantage using binary cross-entropy.
+        We want them to match: i.e. if delta_progress >= 0 then delta_advantage >= 0, else both < 0.
+        """
+        device = self.gen_algo.device
+
+        # Convert the two tensors to {0, 1} sign bits
+        progress_sign = th.relu(F.softsign(delta_progress)).to(device)  
+        advantage_sign = th.relu(F.softsign(delta_advantage)).to(device)
+        # print("progress_sign", progress_sign)
+        # print("advantage_sign", advantage_sign)
+
+        # BCE: advantage_sign is 'prediction', progress_sign is 'target'.
+        # If you prefer, you can swap them; just be consistent across your code.
+        loss = F.binary_cross_entropy_with_logits(advantage_sign, progress_sign)
         return loss
-    
+
     def reward_sign_loss(self, 
-                           delta_progress: th.tensor, 
-                           reward_output_train: th.tensor) -> th.tensor:
-        # loss should be difference in the sign of delta_progress and reward_output_train
-        sign_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(reward_output_train))
-        loss = th.mean(th.relu(-sign_agreement))
+                         delta_progress: th.Tensor, 
+                         reward_output_train: th.Tensor) -> th.Tensor:
+        """
+        Compare sign of delta_progress with sign of reward_output_train using binary cross-entropy.
+        """
+        device = self.gen_algo.device
+
+        progress_sign = th.relu(F.softsign(delta_progress)).to(device)
+        reward_sign   = th.relu(F.softsign(reward_output_train)).to(device)
+
+        loss = F.binary_cross_entropy_with_logits(reward_sign, progress_sign)
         return loss
-    
+
     def value_sign_loss(self,
-                          delta_progress: th.tensor,
-                          delta_value: th.tensor) -> th.tensor:
-          # loss should be difference in the sign of delta_progress and delta_value
-          sign_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(-delta_value))
-          loss = th.mean(th.relu(-sign_agreement))
-          return loss
+                        delta_progress: th.Tensor,
+                        delta_value: th.Tensor) -> th.Tensor:
+        """
+        Compare sign of delta_progress with sign of (-delta_value).
+        Originally you had sign_agreement = sign(delta_progress) * sign(-delta_value).
+        That means if delta_progress is positive, -delta_value should be positive (i.e. delta_value negative).
+        """
+        device = self.gen_algo.device
+
+        progress_sign = th.relu(F.softsign(delta_progress)).to(device)
+        # sign(-delta_value) is 1 if delta_value <= 0, else 0
+        value_sign    = th.relu(F.softsign(-delta_value)).to(device)
+
+        loss = F.binary_cross_entropy_with_logits(value_sign, progress_sign)
+        return loss      
+
+    # def advantage_sign_loss(self,
+    #                  delta_progress: th.tensor,
+    #                     delta_advantage: th.tensor) -> th.tensor:
+    #     advantage_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(delta_advantage).to(self.gen_algo.device))
+    #     #loss = th.relu(-advantage_agreement)
+    #     loss = th.mean(th.relu(-advantage_agreement))
+    #     return loss
+    
+    # def reward_sign_loss(self, 
+    #                        delta_progress: th.tensor, 
+    #                        reward_output_train: th.tensor) -> th.tensor:
+    #     # loss should be difference in the sign of delta_progress and reward_output_train
+    #     sign_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(reward_output_train))
+    #     #loss = th.relu(-sign_agreement)
+    #     loss = th.mean(th.relu(-sign_agreement))
+    #     return loss
+    
+    # def value_sign_loss(self,
+    #                       delta_progress: th.tensor,
+    #                       delta_value: th.tensor) -> th.tensor:
+    #       # loss should be difference in the sign of delta_progress and delta_value
+    #       sign_agreement = (F.softsign(delta_progress).to(self.gen_algo.device)) * (F.softsign(-delta_value))
+    #       #loss = th.relu(-sign_agreement)
+    #       loss = th.mean(th.relu(-sign_agreement))
+    #       return loss
     
     def delta_progress_scale_loss(self, 
                                 delta_progress: th.tensor, 
@@ -502,9 +554,12 @@ class AIRL(common.AdversarialTrainer):
         with self.logger.accumulate_means("disc"):
             # optionally write TB summaries for collected ops
             write_summaries = self._init_tensorboard and self._global_step % 20 == 0
+            self._disc_opt.zero_grad()
+
+
 
             # compute loss
-            self._disc_opt.zero_grad()
+            
 
             batch_iter = self._make_disc_train_batches(
                 gen_samples=gen_samples,
@@ -526,28 +581,31 @@ class AIRL(common.AdversarialTrainer):
 
                 # Renormalise the loss to be averaged over the whole
                 # batch size instead of the minibatch size.
+                print("loss before:", loss)
                 assert len(batch["state"]) == 2 * self.demo_minibatch_size
                 loss *= self.demo_minibatch_size / self.demo_batch_size
-                loss.backward()
+                print("AIRL loss:", loss)
+                if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
+                #self._disc_opt.zero_grad()
+                    shaping_losses = self.progress_shaping_loss()
+                    # get the losses in self.shape_reward list using keys, sum them
+                    shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
+                    print("************************************************************")
+                    for key in self.shape_reward:
+                        print(key, shaping_losses[key])
+                    print("************************************************************")
+                else:
+                    shaping_loss = th.tensor(0.0, device=self.gen_algo.device)
+
+                combined_loss = loss + self.shaping_loss_weight * shaping_loss
+                combined_loss.backward()
+                #loss.backward()
 
             # do gradient step
             self._disc_opt.step()
             self._disc_step += 1
 
             # reward shaping loss
-            if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
-                self._disc_opt.zero_grad()
-                shaping_losses = self.progress_shaping_loss()
-                # get the losses in self.shape_reward list using keys, sum them
-                shaping_loss = sum([shaping_losses[key] for key in self.shape_reward])
-                print("************************************************************")
-                for key in self.shape_reward:
-                    print(key, shaping_losses[key])
-                print("************************************************************")
-                # print(shaping_loss)
-                #shaping_loss *= self.shaping_loss_weight
-                shaping_loss.backward()
-                self._disc_opt.step()
 
                 # relase unused loss
                 # del shaping_losses

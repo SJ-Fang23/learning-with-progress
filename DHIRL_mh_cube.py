@@ -136,7 +136,7 @@ if __name__ == "__main__":
         robosuite_env_name,
         obs_keys = obs_keys,
         rng=np.random.default_rng(SEED),
-        n_envs=8,
+        n_envs=10,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         env=envs,
         policy=CustomLoggingPolicy,  # Use your custom policy here
         #policy=MlpPolicy,
-        batch_size=256,
+        batch_size=128,
         ent_coef=0.01,
         learning_rate=3e-4,
         gamma=0.95,
@@ -216,7 +216,7 @@ if __name__ == "__main__":
     shape_reward = [
         #"demo_range_loss",
         #"delta_progress_scale_loss",
-        #"advantage_sign_loss",
+        "advantage_sign_loss",
         #"value_sign_loss",
         #"reward_sign_loss",
         #"subtrajectory_proportion_loss"
@@ -224,9 +224,9 @@ if __name__ == "__main__":
     #print("trajectory for shaping:", len(trajs_for_shaping))
     airl_trainer = AIRL(
         demonstrations=trajs,
-        demo_batch_size=64,
+        demo_batch_size=128,
         gen_replay_buffer_capacity=20000,
-        n_disc_updates_per_round=5,
+        n_disc_updates_per_round=3,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
