@@ -246,18 +246,17 @@ class AIRL(common.AdversarialTrainer):
         old_value_output_train = old_value_output_train.to(self.gen_algo.device)
         next_value_output_train = next_value_output_train.to(self.gen_algo.device)
 
-        loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
+        #loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
         loss_scale = self.delta_progress_scale_loss(delta_progress, reward_output_train)
         loss_value = self.value_sign_loss(delta_progress, delta_value)
         loss_advantage = self.advantage_sign_loss(delta_progress, advatanage_output)
-        loss_progress_value = self.progress_value_loss(average_progress_value, next_value_output_train)
+        loss_progress_value = self.reward_sign_loss(delta_progress, reward_output_train)
         #loss_proportion = self.subtrajectory_proportion_loss(indices)
 
 
-        return {"progress_sign_loss": loss_sign, "delta_progress_scale_loss": loss_scale, 
-                "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, "progress_value_loss": loss_progress_value,
+        return { "delta_progress_scale_loss": loss_scale, 
+                "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, "reward_sign_loss": loss_progress_value}
                 #"subtrajectory_proportion_loss": loss_proportion,
-                }
 
         
 
