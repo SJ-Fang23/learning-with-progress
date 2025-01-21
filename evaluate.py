@@ -57,6 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('--checkpoint', type=str, default="260")
     parser.add_argument('--env_name', type=str, default="Lift")
     parser.add_argument('--dataset_type', type=str, default = "mh")  
+    parser.add_argument('--render', type=bool, default=True)
 
     args = parser.parse_args()
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,7 +72,7 @@ if __name__ == "__main__":
         robots="Panda",             # load a Sawyer robot and a Panda robot
         gripper_types="default",                # use default grippers per robot arm
         controller_configs=env_meta["env_kwargs"]["controller_configs"],   # each arm is controlled using OSC
-        has_renderer=False,                      # on-screen rendering
+        has_renderer=    args.render,           # no on-screen renderer
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     video_dir = os.path.join(project_path, "videos", args.exp_name)
     os.makedirs(video_dir, exist_ok=True)
     evaluate_times = 10
-    obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
+    obs_keys = ["cube_pos", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
     
     env_rewards = []
     for i in range(evaluate_times):
@@ -119,8 +120,10 @@ if __name__ == "__main__":
             #action, _states = policy.predict(obs)
             action, _ = policy.predict(obs, deterministic=True)
             cnt += 1
-            #frame = env.render()
-            #frames.append(frame)
+            if args.render:
+                env.render()
+                frame = env.render()
+                frames.append(frame)
             obs = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
             obs = obs.cpu().detach().numpy()
             # print("obs", obs)   
@@ -151,6 +154,10 @@ if __name__ == "__main__":
             #print(f"Discriminator Reward: {disc_rew}")
             # if action[6] > 0:
             #     print(f"gripper action: {action[6]}")
+            if args.render:
+                env.render()
+            print("done", next_done)
+            print("info", info)
             #env.render()
             if next_done:
                 print("yessssssss")

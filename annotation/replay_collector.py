@@ -17,10 +17,12 @@ import cv2
 ENV_META_EXCLUDE = ["env_version", "type"]
 
 def replay_trajectory_and_collect_progress(dataset_path:str,
+                      
                       reply_demo_indicies:int,
                       collect_progress_times:int, 
                       replay_demo_nums:int,
                     demo_choose_method = "diff_quality_random_play",
+                    start_demo_index = 0,
                       **env_kwargs):
     '''
     replay trajectory from dataset and collect progress data from user
@@ -47,27 +49,31 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         env_name=env_name,
         **env_kwargs
     )
-    replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
+    #replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
                             # set json data folder
-    data_folder = "nut_assembly_square_mh"
+    #data_folder = "temp_progress_annotation"
     # check if dataset is mh by checking if mh is in the file name
-    # is_mh = "mh" in dataset_path
-    # if is_mh:
-    #     # get demo keys with different quality
-    #     replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
-    #     # set json data folder
-    #     data_folder = "progress_data_mh"
-    # else:
-    #     # get demo keys
-    #     filter_key = "train"
-    #     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
-    #     # print(demo_keys)
-    #     # get demo keys to replay
-    #     print("replay_demo:",reply_demo_indicies)  
-    #     replay_demo_keys = ["demo_{}".format(i) for i in reply_demo_indicies if "demo_{}".format(i) in demo_keys]
-    #     # print(replay_demo_keys)
-    #     # set json data folder
-    #     data_folder = "progress_data_ph"
+    is_mh = "mh" in dataset_path
+    print("is_mh:",is_mh)
+    if is_mh:
+        # get demo keys with different quality
+        replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
+        # set json data folder
+        data_folder = "progress_data_mh"
+    else:
+        # get demo keys
+        filter_key = "train"
+        demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
+        replay_demo_keys = ["demo_{}".format(i) for i in range(start_demo_index, start_demo_index + replay_demo_nums) if "demo_{}".format(i) in demo_keys]
+        # print(demo_keys)
+        # get demo keys to replay
+        # print("replay_demo:",reply_demo_indicies)  
+        # print("start_demo_index:",start_demo_index)
+        # replay_demo_keys = ["demo_{}".format(i + start_demo_index) for i in reply_demo_indicies if "demo_{}".format(i + start_demo_index) in demo_keys]
+        # #replay_demo_keys = ["demo_{}".format(i) for i in reply_demo_indicies if "demo_{}".format(i) in demo_keys]
+        # # print(replay_demo_keys)
+        # # set json data folder
+        data_folder = "progress_data_ph"
 
     # replay demo, pause given times and collect progress data
     progress_data = dict()
@@ -375,9 +381,13 @@ if __name__ == "__main__":
     print(args.replay_demo_numbers)
     # replay_trajectory_and_collect_preference(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)
     replay_trajectory_and_collect_progress(
-        "lift/low_dim_v141.hdf5", 
-        [],
-        10,
-        30,
-        "diff_quality_group_play"
+        "lift/low_dim_v141_lift_ph.hdf5", 
+        reply_demo_indicies= [],
+        replay_demo_nums=20,
+        collect_progress_times=10,
+        demo_choose_method="diff_quality_random_play",
+        start_demo_index=21
+        # 10,
+        # 30,
+        # "diff_quality_group_play"
     )
