@@ -57,9 +57,14 @@ if __name__ == "__main__":
     parser.add_argument('--checkpoint', type=str, default="260")
     parser.add_argument('--env_name', type=str, default="Lift")
     parser.add_argument('--dataset_type', type=str, default = "mh")  
-    parser.add_argument('--render', type=bool, default=True)
+    parser.add_argument('--render', type=str, default="off")
+
 
     args = parser.parse_args()
+    if args.render == "on":
+        args.render = True
+    else:
+        args.render = False
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     #dataset_path = os.path.join(project_path,"human-demo/" + args.env_name + "/low_dim_v141_" + args.env_name + "_" + args.dataset_type + ".hdf5")
     # dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
@@ -72,17 +77,19 @@ if __name__ == "__main__":
         robots="Panda",             # load a Sawyer robot and a Panda robot
         gripper_types="default",                # use default grippers per robot arm
         controller_configs=env_meta["env_kwargs"]["controller_configs"],   # each arm is controlled using OSC
-        has_renderer=    args.render,           # no on-screen renderer
+        has_renderer=  args.render,           # no on-screen renderer
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=300,                            # each episode terminates after 200 steps
+        horizon=100,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
     )
 
     SEED = 1
+    print("chechpoint", args.checkpoint)
+    print(args.render)
 
     env = suite.make(
         args.env_name,
@@ -156,8 +163,8 @@ if __name__ == "__main__":
             #     print(f"gripper action: {action[6]}")
             if args.render:
                 env.render()
-            print("done", next_done)
-            print("info", info)
+            # print("done", next_done)
+            # print("info", info)
             #env.render()
             if next_done:
                 print("yessssssss")

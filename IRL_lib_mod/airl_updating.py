@@ -264,114 +264,114 @@ class AIRL(common.AdversarialTrainer):
                 #"end_progress_loss": loss_end_progress
                 }
 
-    # def advantage_sign_loss(self,
-    #                         delta_progress: th.Tensor,
-    #                         delta_advantage: th.Tensor) -> th.Tensor:
-    #     """
-    #     Compare the sign of delta_progress and delta_advantage using binary cross-entropy.
-    #     We want them to match: i.e. if delta_progress >= 0 then delta_advantage >= 0, else both < 0.
-    #     """
-    #     device = self.gen_algo.device
-
-    #     # Convert the two tensors to {0, 1} sign bits
-    #     progress_sign = th.relu(F.softsign(delta_progress)).to(device)  
-    #     advantage_sign = th.relu(F.softsign(delta_advantage)).to(device)
-    #     # print("progress_sign", progress_sign)
-    #     # print("advantage_sign", advantage_sign)
-
-    #     # BCE: advantage_sign is 'prediction', progress_sign is 'target'.
-    #     # If you prefer, you can swap them; just be consistent across your code.
-    #     loss = F.binary_cross_entropy(advantage_sign, progress_sign)
-    #     return loss
-
-    # def reward_sign_loss(self, 
-    #                      delta_progress: th.Tensor, 
-    #                      reward_output_train: th.Tensor) -> th.Tensor:
-    #     """
-    #     Compare sign of delta_progress with sign of reward_output_train using binary cross-entropy.
-    #     """
-    #     device = self.gen_algo.device
-
-    #     progress_sign = th.relu(F.softsign(delta_progress)).to(device)
-    #     reward_sign   = th.relu(F.softsign(reward_output_train)).to(device)
-
-    #     loss = F.binary_cross_entropy(reward_sign, progress_sign)
-    #     return loss
-
-    # def value_sign_loss(self,
-    #                     delta_progress: th.Tensor,
-    #                     delta_value: th.Tensor) -> th.Tensor:
-    #     """
-    #     Compare sign of delta_progress with sign of (-delta_value).
-    #     Originally you had sign_agreement = sign(delta_progress) * sign(-delta_value).
-    #     That means if delta_progress is positive, -delta_value should be positive (i.e. delta_value negative).
-    #     """
-    #     device = self.gen_algo.device
-
-    #     progress_sign = th.relu(F.softsign(delta_progress)).to(device)
-    #     # sign(-delta_value) is 1 if delta_value <= 0, else 0
-    #     value_sign    = th.relu(F.softsign(-delta_value)).to(device)
-
-    #     loss = F.binary_cross_entropy(value_sign, progress_sign)
-    #     return loss      
     def advantage_sign_loss(self,
                             delta_progress: th.Tensor,
                             delta_advantage: th.Tensor) -> th.Tensor:
         """
-        we want sign(delta_progress) = sign(delta_advantage)
+        Compare the sign of delta_progress and delta_advantage using binary cross-entropy.
+        We want them to match: i.e. if delta_progress >= 0 then delta_advantage >= 0, else both < 0.
         """
-
         device = self.gen_algo.device
 
-        # product is positive if signs match, negative if signs differ
-        prod = delta_progress * delta_advantage
+        # Convert the two tensors to {0, 1} sign bits
+        progress_sign = th.relu(F.softsign(delta_progress)).to(device)  
+        advantage_sign = th.relu(F.softsign(delta_advantage)).to(device)
+        # print("progress_sign", progress_sign)
+        # print("advantage_sign", advantage_sign)
 
-        # we want prod > 0 -> penalize if prod < 0
-        # logistic loss: log(1 + exp(prod)) is small when prod << 0
-        loss = th.log(1.0 + th.exp(prod)).mean().to(device)
-
+        # BCE: advantage_sign is 'prediction', progress_sign is 'target'.
+        # If you prefer, you can swap them; just be consistent across your code.
+        loss = F.binary_cross_entropy(advantage_sign, progress_sign)
         return loss
-    
-    def reward_sign_loss(self,
-                            delta_progress: th.Tensor,
-                            reward_output_train: th.Tensor) -> th.Tensor:
-        """
-        We want sign(delta_progress) = sign(reward_output_train),
-        i.e. delta_progress * reward_output_train > 0.
-        A logistic penalty can be used to push product > 0.
 
+    def reward_sign_loss(self, 
+                         delta_progress: th.Tensor, 
+                         reward_output_train: th.Tensor) -> th.Tensor:
         """
-
+        Compare sign of delta_progress with sign of reward_output_train using binary cross-entropy.
+        """
         device = self.gen_algo.device
 
-        # product is positive if signs match, negative if signs differ
-        prod = delta_progress * reward_output_train
+        progress_sign = th.relu(F.softsign(delta_progress)).to(device)
+        reward_sign   = th.relu(F.softsign(reward_output_train)).to(device)
 
-        # we want prod > 0 -> penalize if prod < 0
-        # logistic loss: log(1 + exp(prod)) is small when prod << 0
-
-        loss = th.log(1.0 + th.exp(prod)).mean().to(device)
-
+        loss = F.binary_cross_entropy(reward_sign, progress_sign)
         return loss
-    
+
     def value_sign_loss(self,
-                    delta_progress: th.Tensor,
-                    delta_value: th.Tensor) -> th.Tensor:
+                        delta_progress: th.Tensor,
+                        delta_value: th.Tensor) -> th.Tensor:
         """
-        We want sign(delta_progress) = opposite of sign(delta_value),
-        i.e. delta_progress * delta_value < 0.
-        A logistic penalty can be used to push product < 0.
+        Compare sign of delta_progress with sign of (-delta_value).
+        Originally you had sign_agreement = sign(delta_progress) * sign(-delta_value).
+        That means if delta_progress is positive, -delta_value should be positive (i.e. delta_value negative).
         """
         device = self.gen_algo.device
 
-        # product is positive if signs match, negative if signs differ
-        prod = delta_progress * delta_value
+        progress_sign = th.relu(F.softsign(delta_progress)).to(device)
+        # sign(-delta_value) is 1 if delta_value <= 0, else 0
+        value_sign    = th.relu(F.softsign(-delta_value)).to(device)
 
-        # we want prod < 0 -> penalize if prod > 0
-        # logistic loss: log(1 + exp(prod)) is small when prod << 0
-        loss = th.log(1.0 + th.exp(prod)).mean().to(device)
+        loss = F.binary_cross_entropy(value_sign, progress_sign)
+        return loss      
+    # def advantage_sign_loss(self,
+    #                         delta_progress: th.Tensor,
+    #                         delta_advantage: th.Tensor) -> th.Tensor:
+    #     """
+    #     we want sign(delta_progress) = sign(delta_advantage)
+    #     """
 
-        return loss
+    #     device = self.gen_algo.device
+
+    #     # product is positive if signs match, negative if signs differ
+    #     prod = delta_progress * delta_advantage
+
+    #     # we want prod > 0 -> penalize if prod < 0
+    #     # logistic loss: log(1 + exp(prod)) is small when prod << 0
+    #     loss = th.log(1.0 + th.exp(prod)).mean().to(device)
+
+    #     return loss
+    
+    # def reward_sign_loss(self,
+    #                         delta_progress: th.Tensor,
+    #                         reward_output_train: th.Tensor) -> th.Tensor:
+    #     """
+    #     We want sign(delta_progress) = sign(reward_output_train),
+    #     i.e. delta_progress * reward_output_train > 0.
+    #     A logistic penalty can be used to push product > 0.
+
+    #     """
+
+    #     device = self.gen_algo.device
+
+    #     # product is positive if signs match, negative if signs differ
+    #     prod = delta_progress * reward_output_train
+
+    #     # we want prod > 0 -> penalize if prod < 0
+    #     # logistic loss: log(1 + exp(prod)) is small when prod << 0
+
+    #     loss = th.log(1.0 + th.exp(prod)).mean().to(device)
+
+    #     return loss
+    
+    # def value_sign_loss(self,
+    #                 delta_progress: th.Tensor,
+    #                 delta_value: th.Tensor) -> th.Tensor:
+    #     """
+    #     We want sign(delta_progress) = opposite of sign(delta_value),
+    #     i.e. delta_progress * delta_value < 0.
+    #     A logistic penalty can be used to push product < 0.
+    #     """
+    #     device = self.gen_algo.device
+
+    #     # product is positive if signs match, negative if signs differ
+    #     prod = delta_progress * delta_value
+
+    #     # we want prod < 0 -> penalize if prod > 0
+    #     # logistic loss: log(1 + exp(prod)) is small when prod << 0
+    #     loss = th.log(1.0 + th.exp(prod)).mean().to(device)
+
+    #     return loss
 
 
     # def advantage_sign_loss(self,
