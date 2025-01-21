@@ -217,8 +217,8 @@ if __name__ == "__main__":
         #"demo_range_loss",
         #"delta_progress_scale_loss",
         "advantage_sign_loss",
-        #"value_sign_loss",
-        #"reward_sign_loss",
+        "value_sign_loss",
+        "reward_sign_loss",
         #"subtrajectory_proportion_loss"
     ]
     #print("trajectory for shaping:", len(trajs_for_shaping))

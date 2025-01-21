@@ -281,7 +281,7 @@ class AIRL(common.AdversarialTrainer):
 
         # BCE: advantage_sign is 'prediction', progress_sign is 'target'.
         # If you prefer, you can swap them; just be consistent across your code.
-        loss = F.binary_cross_entropy_with_logits(advantage_sign, progress_sign)
+        loss = F.binary_cross_entropy(advantage_sign, progress_sign)
         return loss
 
     def reward_sign_loss(self, 
@@ -295,7 +295,7 @@ class AIRL(common.AdversarialTrainer):
         progress_sign = th.relu(F.softsign(delta_progress)).to(device)
         reward_sign   = th.relu(F.softsign(reward_output_train)).to(device)
 
-        loss = F.binary_cross_entropy_with_logits(reward_sign, progress_sign)
+        loss = F.binary_cross_entropy(reward_sign, progress_sign)
         return loss
 
     def value_sign_loss(self,
@@ -312,7 +312,7 @@ class AIRL(common.AdversarialTrainer):
         # sign(-delta_value) is 1 if delta_value <= 0, else 0
         value_sign    = th.relu(F.softsign(-delta_value)).to(device)
 
-        loss = F.binary_cross_entropy_with_logits(value_sign, progress_sign)
+        loss = F.binary_cross_entropy(value_sign, progress_sign)
         return loss      
 
     # def advantage_sign_loss(self,
@@ -584,7 +584,7 @@ class AIRL(common.AdversarialTrainer):
                 #print("loss before:", loss)
                 assert len(batch["state"]) == 2 * self.demo_minibatch_size
                 loss *= self.demo_minibatch_size / self.demo_batch_size
-                #print("AIRL loss:", loss)
+                
                 if len(self.shape_reward) > 0 and self._disc_step % self.shaping_update_freq == 0:
                 #self._disc_opt.zero_grad()
                     shaping_losses = self.progress_shaping_loss()
@@ -593,11 +593,12 @@ class AIRL(common.AdversarialTrainer):
                     print("************************************************************")
                     for key in self.shape_reward:
                         print(key, shaping_losses[key])
+                    print("AIRL loss:", loss)
                     print("************************************************************")
                 else:
                     shaping_loss = th.tensor(0.0, device=self.gen_algo.device)
 
-                combined_loss = loss + self.shaping_loss_weight * shaping_loss
+                combined_loss = loss + shaping_loss
                 combined_loss.backward()
                 #loss.backward()
 
