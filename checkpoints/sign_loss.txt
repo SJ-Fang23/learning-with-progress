@@ -1,0 +1,2 @@
+mean reward at round 0:98.80052521174049
+running time 0 round :00:30:31
