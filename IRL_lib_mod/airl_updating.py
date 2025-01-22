@@ -45,7 +45,7 @@ class AIRL(common.AdversarialTrainer):
         shaping_loss_weight: float = 1.0,
         shaping_update_freq: int = 1,
         shaping_lr: float = 1e-3,
-        save_model_every = 20,
+        save_model_every = 10,
         save_path = "checkpoints/default",
         traj_index = [], 
         **kwargs,
@@ -250,19 +250,29 @@ class AIRL(common.AdversarialTrainer):
         next_value_output_train = next_value_output_train.to(self.gen_algo.device)
 
         #loss_sign = self.progress_sign_loss(delta_progress, reward_output_train)
-        loss_scale = self.delta_progress_scale_loss(delta_progress, reward_output_train)
+        loss_scale = self.delta_progress_reward_loss(delta_progress, reward_output_train)
         loss_value = self.value_sign_loss(delta_progress, delta_value)
         loss_advantage = self.advantage_sign_loss(delta_progress, advatanage_output)
         loss_progress_reward= self.reward_sign_loss(average_progress_value, next_value_output_train)
-        #loss_proportion = self.subtrajectory_proportion_loss()
-        #loss_end_progress = self.end_progress_loss()
+        if "subtrajectory_proportion_loss" in self.shape_reward:
+            loss_proportion = self.subtrajectory_proportion_loss()
+        if "end_progress_loss" in self.shape_reward:
+            loss_end_progress = self.end_progress_loss()
 
+        # return the loss
+        return_dict = {"delta_progress_reward_loss": loss_scale,
+                        "value_sign_loss": loss_value,
+                        "advantage_sign_loss": loss_advantage,
+                        "reward_sign_loss": loss_progress_reward,
+                        #"subtrajectory_proportion_loss": loss_proportion,
+                        #"end_progress_loss": loss_end_progress
+                        }
+        if "end_progress_loss" in self.shape_reward:
+            return_dict["end_progress_loss"] = loss_end_progress
+        if "subtrajectory_proportion_loss" in self.shape_reward:
+            return_dict["subtrajectory_proportion_loss"] = loss_proportion
 
-        return {"delta_progress_scale_loss": loss_scale, 
-                "value_sign_loss": loss_value, "advantage_sign_loss": loss_advantage, "reward_sign_loss": loss_progress_reward,
-               # "subtrajectory_proportion_loss": loss_proportion,
-                #"end_progress_loss": loss_end_progress
-                }
+        return return_dict
 
     def advantage_sign_loss(self,
                             delta_progress: th.Tensor,
@@ -314,6 +324,28 @@ class AIRL(common.AdversarialTrainer):
 
         loss = F.binary_cross_entropy(value_sign, progress_sign)
         return loss      
+    def delta_progress_reward_loss(self, 
+                                delta_progress: th.tensor, 
+                                reward_output_train: th.tensor)-> th.tensor:
+        # loss should make the subtrajectory with higher delta_progress have higher reward_output_train
+        
+        # compute pairwise differences
+        # delta_progress_diff = delta_progress.unsqueeze(1) - delta_progress.unsqueeze(0)
+        # reward_output_train_diff = reward_output_train.unsqueeze(1) - reward_output_train.unsqueeze(0)
+
+        # # we want reward_output_train_diff to be larger when delta_progress_diff is larger
+        # # idea is that if delta_progress_diff > 0, then reward_output_train_diff > 0
+        # loss = th.mean(th.relu(-F.softsign(delta_progress_diff * reward_output_train_diff)))
+
+        device = self.gen_algo.device
+        delta_progress_diff = delta_progress.unsqueeze(1) - delta_progress.unsqueeze(0)
+        reward_output_train_diff = reward_output_train.unsqueeze(1) - reward_output_train.unsqueeze(0)
+        delta_progress_diff = th.relu(F.softsign(delta_progress_diff)).to(device)
+        reward_output_train_diff = th.relu(F.softsign(reward_output_train_diff)).to(device)
+        loss = F.binary_cross_entropy(reward_output_train_diff, delta_progress_diff)
+
+
+        return loss
     # def advantage_sign_loss(self,
     #                         delta_progress: th.Tensor,
     #                         delta_advantage: th.Tensor) -> th.Tensor:
@@ -399,167 +431,219 @@ class AIRL(common.AdversarialTrainer):
     #       #loss = th.relu(-sign_agreement)
     #       loss = th.mean(th.relu(-sign_agreement))
     #       return loss
-    
-    def delta_progress_scale_loss(self, 
-                                delta_progress: th.tensor, 
-                                reward_output_train: th.tensor)-> th.tensor:
-        # loss should make the subtrajectory with higher delta_progress have higher reward_output_train
-        
-        # compute pairwise differences
-        delta_progress_diff = delta_progress.unsqueeze(1) - delta_progress.unsqueeze(0)
-        reward_output_train_diff = reward_output_train.unsqueeze(1) - reward_output_train.unsqueeze(0)
 
-        # we want reward_output_train_diff to be larger when delta_progress_diff is larger
-        # idea is that if delta_progress_diff > 0, then reward_output_train_diff > 0
-        loss = th.mean(th.relu(-F.softsign(delta_progress_diff * reward_output_train_diff)))
-        return loss
-    def end_progress_loss(self,) -> th.Tensor:
-        '''for a trajectory, if the progress in the end is 100, then the total reward for the trajectory should be higher than 
-        the other trajectories with end progress less than 90 for at least 5%.
-        If the difference is less 10, then the difference in reward should be less than 10%.
-        
-        '''
+    
+
+    def end_progress_loss(self) -> th.Tensor:
+        """
+        Compare the final progress of random pairs of demonstrations. 
+        If final progress is similar (difference < 10), enforce the total 
+        rewards to be within 10%. If final progress is different, enforce 
+        the rewards to differ by at least 5%. Uses a piecewise, differentiable 
+        penalty via torch operations (no .item() or NumPy).
+        """
         device = self.gen_algo.device
-        if len(self.demonstrations_for_shaping) == 0:
-            return th.tensor(0.0, device=device)
+        if len(self.demonstrations_for_shaping) < 2:
+            # If we have fewer than 2 demos, nothing to compare
+            return th.zeros((), device=device)
 
-        
-        # select four random trajectories from self.traj_index
-        idxs = np.random.choice(self.traj_index, 2, replace=False)
-        all_losses = []
-        end_progress = []
-        end_rewards = []
-        for i in idxs:
-            #only consider the last segment
-            segments = [(ann[0]["start_step"], ann[0]["end_step"], ann[0]["end_progress"])
-                        for ann in self.annotation_list if ann[1] == i]
-            if len(segments) < 2:
+        # Choose how many random pairs to sample (e.g. 2 pairs):
+        num_pairs = 2
+        if len(self.traj_index) < 2:
+            # Not enough distinct trajectories
+            return th.zeros((), device=device)
+
+        # Sample random distinct pairs of trajectory indices
+        idxs = np.random.choice(self.traj_index, size=2 * num_pairs, replace=False)
+        idx_pairs = [(idxs[2*k], idxs[2*k+1]) for k in range(num_pairs)]
+
+        all_penalties = []
+
+        for (i, j) in idx_pairs:
+            # Find last segment for demo i
+            segs_i = [(ann[0]["start_step"], ann[0]["end_step"], ann[0]["end_progress"])
+                    for ann in self.annotation_list if ann[1] == i]
+            if len(segs_i) < 1:
                 continue
-            segments.sort(key=lambda x: x[1])
-            end_progress.append(segments[-1][2])
-            # load entire trajectory
-            traj = self.demonstrations_for_shaping[i]
-            T = len(traj.obs)
-            states_all = th.tensor(traj.obs, dtype=th.float32, device=device)
-            actions_all = th.tensor(traj.acts, dtype=th.float32, device=device)
-            next_all = th.tensor(traj.obs, dtype=th.float32, device=device)
-            dones_all = th.zeros(T, dtype=th.float32, device=device)
-            # match the length for all tensors
-            if len(states_all) != len(next_all) or len(states_all) != len(actions_all):
-                # reduce the length of states by the minimum length
-                min_length = min(len(states_all), len(next_all), len(actions_all))
-                states_all = states_all[:min_length]
-                actions_all = actions_all[:min_length]
-                next_all = next_all[:min_length]
-                dones_all = dones_all[:min_length]
+            segs_i.sort(key=lambda x: x[1])
+            end_prog_i = segs_i[-1][2]  # final progress for i (float)
+            
+            # Find last segment for demo j
+            segs_j = [(ann[0]["start_step"], ann[0]["end_step"], ann[0]["end_progress"])
+                    for ann in self.annotation_list if ann[1] == j]
+            if len(segs_j) < 1:
+                continue
+            segs_j.sort(key=lambda x: x[1])
+            end_prog_j = segs_j[-1][2]  # final progress for j (float)
+            
+            # Convert those final progresses to Tensors (constant w.r.t. network)
+            end_prog_i_t = th.tensor(end_prog_i, dtype=th.float32, device=device)
+            end_prog_j_t = th.tensor(end_prog_j, dtype=th.float32, device=device)
+            
+            # Compute final reward for entire trajectory i in a differentiable manner
+            traj_i = self.demonstrations_for_shaping[i]
+            states_i = th.tensor(traj_i.obs, dtype=th.float32, device=device)
+            acts_i   = th.tensor(traj_i.acts, dtype=th.float32, device=device)
+            # Next-state can be shifted by 1. If you want the same length, do:
+            next_i   = th.tensor(traj_i.obs, dtype=th.float32, device=device)
+            dones_i  = th.zeros(len(states_i), dtype=th.float32, device=device)
+            # Align shapes to min length
+            min_len_i = min(len(states_i), len(acts_i), len(next_i))
+            states_i = states_i[:min_len_i]
+            acts_i   = acts_i[:min_len_i]
+            next_i   = next_i[:min_len_i]
+            dones_i  = dones_i[:min_len_i]
+            
+            rews_i = self._reward_net.base(states_i, acts_i, next_i, dones_i)
+            # total reward remains a Tensor
+            total_rew_i = rews_i.sum()
 
-            all_rews = self._reward_net.base(states_all, actions_all, next_all, dones_all)
-            total_reward = all_rews.sum().item()
-            end_rewards.append(total_reward)
-    
-        # then compare the end progress and end rewards
-        for i in range(len(idxs)):
-            for j in range(i+1, len(idxs)):
-                if abs(end_progress[i] - end_progress[j]) < 10:
-                    if abs(end_rewards[i] - end_rewards[j]) > 0.1 * max(end_rewards[i], end_rewards[j]):
-                        all_losses.append(abs(end_rewards[i] - end_rewards[j])/max(end_rewards[i], end_rewards[j]))
-                    else:
-                        pass
-                else:
-                    if max(end_rewards[i], end_rewards[j]) - min(end_rewards[i], end_rewards[j]) > 0.05 * max(end_rewards[i], end_rewards[j]):
-                        pass
-                    else:
-                        all_losses.append(max(end_rewards[i], end_rewards[j]) - min(end_rewards[i], end_rewards[j]) / 0.05 * max(end_rewards[i], end_rewards[j]))
+            # Do the same for j
+            traj_j = self.demonstrations_for_shaping[j]
+            states_j = th.tensor(traj_j.obs, dtype=th.float32, device=device)
+            acts_j   = th.tensor(traj_j.acts, dtype=th.float32, device=device)
+            next_j   = th.tensor(traj_j.obs, dtype=th.float32, device=device)
+            dones_j  = th.zeros(len(states_j), dtype=th.float32, device=device)
+            min_len_j = min(len(states_j), len(acts_j), len(next_j))
+            states_j = states_j[:min_len_j]
+            acts_j   = acts_j[:min_len_j]
+            next_j   = next_j[:min_len_j]
+            dones_j  = dones_j[:min_len_j]
 
-        if len(all_losses) == 0:
-            return th.tensor(0.0, device=device)
-        return th.tensor(np.mean(all_losses), dtype=th.float32, device=device)
+            rews_j = self._reward_net.base(states_j, acts_j, next_j, dones_j)
+            total_rew_j = rews_j.sum()
+
+            # Now define piecewise penalty:
+            # 1) If |end_prog_i - end_prog_j| < 10, we want |R_i - R_j| < 0.1 * max(R_i, R_j).
+            # 2) Else, we want |R_i - R_j| > 0.05 * max(R_i, R_j).
+            # We'll encode both in a single differentiable expression.
+
+            progress_diff = th.abs(end_prog_i_t - end_prog_j_t)
+            reward_diff   = th.abs(total_rew_i - total_rew_j)
+            reward_max    = th.max(total_rew_i, total_rew_j).clamp_min(1e-6)  # avoid / 0
+
+            # Condition: progress_diff < 10
+            similar_mask = (progress_diff < 10.0)
+            dissimilar_mask = ~similar_mask  # logical NOT
+
+            # For similar: penalty = relu( |r_i - r_j| - 0.1 * max ) / max
+            # If they're "too far apart," this penalty is > 0
+            similar_penalty = F.relu(reward_diff - 0.1 * reward_max) / reward_max
+
+            # For dissimilar: penalty = relu(0.05*max - |r_i - r_j| ) / max
+            # If they're "too close," penalty is > 0
+            dissimilar_penalty = F.relu(0.05 * reward_max - reward_diff) / reward_max
+
+            # Combine them using a torch.where
+            pair_penalty = th.where(similar_mask, similar_penalty, dissimilar_penalty)
+
+            all_penalties.append(pair_penalty)
+
+        if len(all_penalties) == 0:
+            return th.zeros((), device=device)
+
+        # Average penalty over the sampled pairs
+        loss = th.mean(th.stack(all_penalties))
+        return loss
+
 
 
 
     
     def subtrajectory_proportion_loss(self) -> th.Tensor:
         """
-        For a trajectory divided into subtrajectories [1..K], if sub7 ends at ~70% progress,
-        then the sum of rewards up to sub7 should be ~70% of the total sum of rewards.
-        
-        We sample a set of trajectories. For each, break down by annotation segments
-        in ascending order, compute partial sums of progress & partial sums of rewards.
-        Compare their proportions.
+        For each sampled trajectory, we divide it by annotation segments [1..K].
+        If segment k ends at progress p_k, and the entire trajectory ends at progress p_final,
+        then the portion of total progress up to segment k is (p_k / p_final).
+        We want that to match the portion of total reward up to segment k, i.e. 
+        (sum_of_rewards_up_to_segment_k / total_reward).
+
+        This function returns a loss that penalizes the L1 difference between those proportions.
         """
         device = self.gen_algo.device
-        if len(self.demonstrations_for_shaping) == 0:
-            print("problem here")
-            return th.tensor(0.0, device=device)
 
-        # select two random trajectories from self.traj_index
-        idxs = np.random.choice(self.traj_index, 2, replace=False)
+        # If there are no demonstrations, return 0
+        if len(self.demonstrations_for_shaping) < 1:
+            return th.zeros((), device=device)
+
+        # Randomly select some trajectory indices to compare
+        if len(self.traj_index) < 1:
+            return th.zeros((), device=device)
+
+        # Suppose we pick 2 random trajectories (or pick more if you like)
+        idxs = np.random.choice(self.traj_index, size=2, replace=False)
+
         all_losses = []
 
         for i in idxs:
-            # gather all segments for demonstration i
-            # each annotation is (dict(...), demonstration_index)
-            segments = [(ann[0]["start_step"], ann[0]["end_step"], ann[0]["end_progress"])
-                        for ann in self.annotation_list if ann[1] == i]
-            if len(segments) < 2:
+            # Gather segments for demonstration i
+            segments = [
+                (ann[0]["start_step"], ann[0]["end_step"], ann[0]["end_progress"])
+                for ann in self.annotation_list 
+                if ann[1] == i
+            ]
+            if len(segments) < 1:
+                # No segmentation => skip
                 continue
 
-            # sort by end_step ascending
+            # Sort segments by ascending end_step
             segments.sort(key=lambda x: x[1])
 
-            # load entire trajectory
+            # Load entire trajectory i
             traj = self.demonstrations_for_shaping[i]
-            T = len(traj.obs)
             states_all = th.tensor(traj.obs, dtype=th.float32, device=device)
             actions_all = th.tensor(traj.acts, dtype=th.float32, device=device)
             next_all = th.tensor(traj.obs, dtype=th.float32, device=device)
-            dones_all = th.zeros(T, dtype=th.float32, device=device)
-            # match the length for all tensors
-            if len(states_all) != len(next_all) or len(states_all) != len(actions_all):
-                # reduce the length of states by the minimum length
-                min_length = min(len(states_all), len(next_all), len(actions_all))
-                states_all = states_all[:min_length]
-                actions_all = actions_all[:min_length]
-                next_all = next_all[:min_length]
-                dones_all = dones_all[:min_length]
-            
-            all_rews = self._reward_net.base(states_all, actions_all, next_all, dones_all)
+            dones_all = th.zeros(len(states_all), dtype=th.float32, device=device)
 
-            total_reward = all_rews.sum().item()
-            final_progress = segments[-1][2]  # the last segment's end_progress
-            if abs(final_progress) < 1e-6:
-                # if final progress is 0, skip
+            # Align lengths so they match
+            min_len = min(len(states_all), len(actions_all), len(next_all))
+            states_all = states_all[:min_len]
+            actions_all = actions_all[:min_len]
+            next_all = next_all[:min_len]
+            dones_all = dones_all[:min_len]
+
+            # Compute all rewards as a torch Tensor
+            all_rews = self._reward_net.base(states_all, actions_all, next_all, dones_all)
+            total_reward = all_rews.sum()  # Tensor
+
+            # final progress from the last segment
+            final_progress_val = segments[-1][2]
+            # If final progress is effectively zero, skip to avoid division by zero
+            if abs(final_progress_val) < 1e-6:
                 continue
 
-            partial_rew_sums = []
-            partial_progress = []
-            for seg_idx, (st, en, seg_prog) in enumerate(segments):
-                # sum rewards from subtrajectory [1..seg_idx]
-                # but we can accumulate from the start up to `en`.
-                # This is the total reward up to that segment's end.
-                sub_r = all_rews[: en].sum().item()
-                # proportion of progress = seg_prog / final_progress
-                # proportion of rewards = sub_r / total_reward
-                # prop_prog = seg_prog / final_progress
-                # prop_rew = sub_r / (total_reward + 1e-8)
-                # in torch operations
-                prop_prog = th.tensor(seg_prog / final_progress, dtype=th.float32, device=device)
-                prop_rew = th.tensor(sub_r / (total_reward + 1e-8), dtype=th.float32, device=device)
+            # Convert to Torch tensor (constant for the calculation)
+            final_progress = th.tensor(final_progress_val, dtype=th.float32, device=device)
 
-                prop_prog = th.tensor(prop_prog, dtype=th.float32, device=device)
-                prop_rew = th.tensor(prop_rew, dtype=th.float32, device=device)
-                # measure how far we are from matching
-                # e.g. L1 difference
-                diff = th.abs(prop_prog - prop_rew)
-                partial_rew_sums.append(diff)
+            partial_losses = []
+            # For each subtrajectory segment, compute partial sums and compare
+            for (st, en, seg_prog_val) in segments:
+                seg_prog = th.tensor(seg_prog_val, dtype=th.float32, device=device)
 
-            # average difference across segments
-            demo_loss = th.mean(th.stack(partial_rew_sums))
-            all_losses.append(demo_loss)
+                # sub_r is the cumulative reward from step 0 to step `en`
+                # in PyTorch:
+                sub_r = all_rews[:en].sum()  # still a Tensor
+
+                # proportions:
+                prop_progress = seg_prog / final_progress
+                prop_rewards  = sub_r / (total_reward + 1e-8)
+
+                # L1 difference (or use MSE if you prefer)
+                diff = th.abs(prop_progress - prop_rewards)
+                partial_losses.append(diff)
+
+            if len(partial_losses) > 0:
+                # average difference across subtrajectory segments
+                demo_loss = th.mean(th.stack(partial_losses))
+                all_losses.append(demo_loss)
 
         if len(all_losses) == 0:
-            return th.tensor(0.0, device=device)
-        return th.tensor(np.mean(all_losses), dtype=th.float32, device=device)
+            return th.zeros((), device=device)
+
+        # Average over all sampled trajectories
+        return th.mean(th.stack(all_losses))
+
 
     @property
     def reward_train(self) -> reward_nets.RewardNet:

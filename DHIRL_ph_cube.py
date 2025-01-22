@@ -215,11 +215,12 @@ if __name__ == "__main__":
 # "progress_regularization"]
     shape_reward = [
         #"demo_range_loss",
-        #"delta_progress_scale_loss",
-        #"advantage_sign_loss",
+        "delta_progress_reward_loss",
+        "advantage_sign_loss",
         "value_sign_loss",
-        #"reward_sign_loss",
-        #"subtrajectory_proportion_loss"
+        "reward_sign_loss",
+        "subtrajectory_proportion_loss",
+        "end_progress_loss",
     ]
     #print("trajectory for shaping:", len(trajs_for_shaping))
     airl_trainer = AIRL(
