@@ -15,8 +15,6 @@ def load_dataset_to_trajectories(obs_keys:Iterable[str],
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     dataset_path = os.path.join(project_path,dataset_path)
     f = h5py.File(dataset_path,'r')
-    # print all obs keys in f
-    #print(f["data/{}/obs".format("train")].keys())
     filter_key = "train"
     demo_keys = [elem.decode("utf-8") for elem in np.array(f["mask/{}".format(filter_key)][:])]
     #print("all demo keys: ", demo_keys)

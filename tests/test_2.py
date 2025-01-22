@@ -1,5 +1,9 @@
-import numpy as np
+import robosuite as suite
 
+env = suite.make(
+    robots="Panda",  # use panda robot
+    env_name="PickPlaceCan",  # or whichever environment
+)
 
-a = np.array([0,1][0:1])
-print(a)
+obs = env.reset()
+print(obs.keys())
