@@ -448,7 +448,7 @@ class AIRL(common.AdversarialTrainer):
             return th.zeros((), device=device)
 
         # Choose how many random pairs to sample (e.g. 2 pairs):
-        num_pairs = 2
+        num_pairs = 4
         if len(self.traj_index) < 2:
             # Not enough distinct trajectories
             return th.zeros((), device=device)

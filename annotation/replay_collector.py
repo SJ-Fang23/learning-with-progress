@@ -118,6 +118,7 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
                 cnt += 1
                 progress_data[key] = progress_data.get(key, [])
                 # get user input
+                print("done: ", done)   
                 user_input = input("Please input the progress data " + str(cnt) + " :")
                 # user input must be a float, otherwise ask user to input again
                 while not user_input.replace(".", "").isdigit():

@@ -57,7 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('--checkpoint', type=str, default="260")
     parser.add_argument('--env_name', type=str, default="Lift")
     parser.add_argument('--dataset_type', type=str, default = "mh")  
-    parser.add_argument('--render', type=str, default="off")
+    parser.add_argument('--render', type=str, default="on")
 
 
     args = parser.parse_args()
@@ -80,8 +80,8 @@ if __name__ == "__main__":
         has_renderer=  args.render,           # no on-screen renderer
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
-        control_freq=20,                        # 20 hz control for applied actions
-        horizon=100,                            # each episode terminates after 200 steps
+        control_freq=10,                        # 20 hz control for applied actions
+        horizon=300,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
