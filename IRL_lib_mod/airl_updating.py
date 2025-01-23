@@ -540,6 +540,7 @@ class AIRL(common.AdversarialTrainer):
             all_penalties.append(pair_penalty)
 
         if len(all_penalties) == 0:
+            print("We never found any valid loss in end progress, returning zero.")
             return th.zeros((), device=device)
 
         # Average penalty over the sampled pairs
@@ -639,6 +640,7 @@ class AIRL(common.AdversarialTrainer):
                 all_losses.append(demo_loss)
 
         if len(all_losses) == 0:
+            print("We never found any valid subtrajectories loss, returning zero.")
             return th.zeros((), device=device)
 
         # Average over all sampled trajectories
