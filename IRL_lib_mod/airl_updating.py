@@ -445,17 +445,20 @@ class AIRL(common.AdversarialTrainer):
         device = self.gen_algo.device
         if len(self.demonstrations_for_shaping) < 2:
             # If we have fewer than 2 demos, nothing to compare
+            print("Not enough demonstrations for end progress loss, returning zero.")
             return th.zeros((), device=device)
 
         # Choose how many random pairs to sample (e.g. 2 pairs):
         num_pairs = 4
         if len(self.traj_index) < 2:
             # Not enough distinct trajectories
+            print("Not enough distinct trajectories for end progress loss, returning zero.")
             return th.zeros((), device=device)
 
         # Sample random distinct pairs of trajectory indices
         idxs = np.random.choice(self.traj_index, size=2 * num_pairs, replace=False)
         idx_pairs = [(idxs[2*k], idxs[2*k+1]) for k in range(num_pairs)]
+        print("idx_pairs", idx_pairs)
 
         all_penalties = []
 
@@ -565,10 +568,12 @@ class AIRL(common.AdversarialTrainer):
 
         # If there are no demonstrations, return 0
         if len(self.demonstrations_for_shaping) < 1:
+            print("No demonstrations found, returning zero.")
             return th.zeros((), device=device)
 
         # Randomly select some trajectory indices to compare
         if len(self.traj_index) < 1:
+            print("Not enough distinct trajectories, returning zero.")
             return th.zeros((), device=device)
 
         # Suppose we pick 2 random trajectories (or pick more if you like)
@@ -585,8 +590,9 @@ class AIRL(common.AdversarialTrainer):
             ]
             if len(segments) < 1:
                 # No segmentation => skip
+                print("No segments found for trajectory, skipping.")
                 continue
-
+            print("segments", segments)
             # Sort segments by ascending end_step
             segments.sort(key=lambda x: x[1])
 
