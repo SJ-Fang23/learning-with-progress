@@ -72,6 +72,13 @@ if __name__ == "__main__":
 
     f= h5py.File(dataset_path,'r')
     env_meta = json.loads(f["data"].attrs["env_args"])
+    # make_env_kwargs = json.loads(f["data"].attrs["env_args"])["env_kwargs"]
+    # # enable rendering
+    # make_env_kwargs["has_renderer"] = True
+    # make_env_kwargs["reward_shaping"] = True
+    # make_env_kwargs['horizon'] = 300
+    # print('dataset make_env_kwargs')
+    # print(make_env_kwargs)
 
     make_env_kwargs = dict(
         robots="Panda",             # load a Sawyer robot and a Panda robot
@@ -86,6 +93,8 @@ if __name__ == "__main__":
         use_camera_obs=False,
         reward_shaping=True,
     )
+    # print("we set the make_env_kwargs")
+    # print("make_env_kwargs", make_env_kwargs)
 
     SEED = 1
     print("chechpoint", args.checkpoint)

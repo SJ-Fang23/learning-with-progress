@@ -49,6 +49,11 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
         env_name=env_name,
         **env_kwargs
     )
+    #print all end states in f["data"]
+    for key in f["data"]:
+        print(key)
+        #print(f["data/{}/states".format(key)][0][12])
+        print(f["data/{}/states".format(key)][-1][12])
     #replay_demo_keys  = generate_replay_keys_for_progress(dataset_path, replay_demo_nums, demo_choose_method)
                             # set json data folder
     #data_folder = "temp_progress_annotation"
@@ -119,7 +124,9 @@ def replay_trajectory_and_collect_progress(dataset_path:str,
                 progress_data[key] = progress_data.get(key, [])
                 # get user input
                 print("done: ", done)   
+                print("block x, y, z: ", obs["cube_pos"])
                 user_input = input("Please input the progress data " + str(cnt) + " :")
+                
                 # user input must be a float, otherwise ask user to input again
                 while not user_input.replace(".", "").isdigit():
                     user_input = input("Please input the progress data: ")
@@ -384,10 +391,10 @@ if __name__ == "__main__":
     replay_trajectory_and_collect_progress(
         "lift/low_dim_v141_lift_ph.hdf5", 
         reply_demo_indicies= [],
-        replay_demo_nums=20,
-        collect_progress_times=10,
+        replay_demo_nums=40,
+        collect_progress_times=9,
         demo_choose_method="diff_quality_random_play",
-        start_demo_index=21
+        start_demo_index=51
         # 10,
         # 30,
         # "diff_quality_group_play"

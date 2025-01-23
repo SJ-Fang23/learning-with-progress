@@ -15,12 +15,12 @@
         "start_step": 8,
         "end_step": 12,
         "start_progress": 8.0,
-        "end_progress": 12.0
+        "end_progress": 15.0
     },
     {
         "start_step": 12,
         "end_step": 17,
-        "start_progress": 12.0,
+        "start_progress": 15.0,
         "end_progress": 20.0
     },
     {
@@ -33,36 +33,30 @@
         "start_step": 21,
         "end_step": 25,
         "start_progress": 25.0,
-        "end_progress": 35.0
+        "end_progress": 30.0
     },
     {
         "start_step": 25,
-        "end_step": 29,
-        "start_progress": 35.0,
+        "end_step": 30,
+        "start_progress": 30.0,
         "end_progress": 40.0
     },
     {
-        "start_step": 29,
+        "start_step": 30,
         "end_step": 34,
         "start_progress": 40.0,
-        "end_progress": 55.0
+        "end_progress": 48.0
     },
     {
         "start_step": 34,
         "end_step": 38,
-        "start_progress": 55.0,
-        "end_progress": 60.0
+        "start_progress": 48.0,
+        "end_progress": 65.0
     },
     {
         "start_step": 38,
         "end_step": 42,
-        "start_progress": 60.0,
-        "end_progress": 75.0
-    },
-    {
-        "start_step": 42,
-        "end_step": 46,
-        "start_progress": 75.0,
-        "end_progress": 85.0
+        "start_progress": 65.0,
+        "end_progress": 76.0
     }
 ]

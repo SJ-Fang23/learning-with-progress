@@ -3,12 +3,12 @@
         "start_step": 0,
         "end_step": 5,
         "start_progress": 0,
-        "end_progress": 5.0
+        "end_progress": 7.0
     },
     {
         "start_step": 5,
         "end_step": 11,
-        "start_progress": 5.0,
+        "start_progress": 7.0,
         "end_progress": 13.0
     },
     {
@@ -21,42 +21,42 @@
         "start_step": 16,
         "end_step": 22,
         "start_progress": 17.0,
-        "end_progress": 27.0
+        "end_progress": 22.0
     },
     {
         "start_step": 22,
         "end_step": 27,
-        "start_progress": 27.0,
-        "end_progress": 29.0
+        "start_progress": 22.0,
+        "end_progress": 27.0
     },
     {
         "start_step": 27,
         "end_step": 33,
-        "start_progress": 29.0,
-        "end_progress": 38.0
+        "start_progress": 27.0,
+        "end_progress": 30.0
     },
     {
         "start_step": 33,
         "end_step": 38,
-        "start_progress": 38.0,
-        "end_progress": 40.0
+        "start_progress": 30.0,
+        "end_progress": 33.0
     },
     {
         "start_step": 38,
         "end_step": 44,
-        "start_progress": 40.0,
-        "end_progress": 45.0
+        "start_progress": 33.0,
+        "end_progress": 50.0
     },
     {
         "start_step": 44,
         "end_step": 49,
-        "start_progress": 45.0,
-        "end_progress": 65.0
+        "start_progress": 50.0,
+        "end_progress": 64.0
     },
     {
         "start_step": 49,
         "end_step": 54,
-        "start_progress": 65.0,
-        "end_progress": 76.0
+        "start_progress": 64.0,
+        "end_progress": 74.0
     }
 ]
