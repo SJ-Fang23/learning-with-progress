@@ -628,20 +628,20 @@ class AIRL(common.AdversarialTrainer):
             self._disc_opt.step()
             self._disc_step += 1
 
-            # Logging
-            with th.no_grad():
-                disc_logits_cat = th.cat(all_disc_logits, dim=0)
-                labels_cat = th.cat(all_labels, dim=0)
-                final_loss_cat = th.cat(all_losses, dim=0)
-                train_stats = compute_train_stats(
-                    disc_logits_cat,
-                    labels_cat,
-                    final_loss_cat.mean(),
-                )
-            self.logger.record("global_step", self._global_step)
-            for k, v in train_stats.items():
-                self.logger.record(k, v)
-            self.logger.dump(self._disc_step)
+            # # Logging
+            # with th.no_grad():
+            #     disc_logits_cat = th.cat(all_disc_logits, dim=0)
+            #     labels_cat = th.cat(all_labels, dim=0)
+            #     final_loss_cat = th.cat(all_losses, dim=0)
+            #     train_stats = compute_train_stats(
+            #         disc_logits_cat,
+            #         labels_cat,
+            #         final_loss_cat.mean(),
+            #     )
+            # self.logger.record("global_step", self._global_step)
+            # for k, v in train_stats.items():
+            #     self.logger.record(k, v)
+            # self.logger.dump(self._disc_step)
 
         # Possibly save model
         if self._global_step % self.save_model_every == 0:
