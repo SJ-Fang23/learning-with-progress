@@ -5,7 +5,8 @@ import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.ppo import MlpPolicy
-
+import scipy
+from sklearn.preprocessing import MinMaxScaler
 # from imitation.algorithms.adversarial.airl import AIRL
 from IRL_lib_mod.airl import AIRL
 from imitation.data import rollout
@@ -58,8 +59,9 @@ if __name__ == "__main__":
     parser.add_argument('--env_name', type=str, default="Lift")
     parser.add_argument('--dataset_type', type=str, default = "mh")  
     parser.add_argument('--render', type=str, default="on")
+    parser.add_argument('--eval_times', type=int, default=10)
 
-
+    scaler = MinMaxScaler()
     args = parser.parse_args()
     if args.render == "on":
         args.render = True
@@ -117,10 +119,14 @@ if __name__ == "__main__":
     reward_net.to(reward_net_device)
     video_dir = os.path.join(project_path, "videos", args.exp_name)
     os.makedirs(video_dir, exist_ok=True)
-    evaluate_times = 10
+    evaluate_times = args.eval_times
     obs_keys = ["cube_pos", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
     
     env_rewards = []
+    correlations = []
+    normalized_pearson_correlations = []
+    normalized_spearman_correlations = []
+    success_cnt = 0
     for i in range(evaluate_times):
         obs = env.reset()
         obs = [obs[key] for key in obs_keys]
@@ -128,8 +134,8 @@ if __name__ == "__main__":
         past_action = np.zeros(7)
         done = False
         cnt = 0
-        rewards= 0
-        total_disc_rew = 0
+        rewards= []
+        total_disc_rew = []
         frames = []
         while not done:
             
@@ -152,7 +158,7 @@ if __name__ == "__main__":
             #action = action.cpu().detach().numpy().squeeze()
 
             next_obs, reward, next_done, info = env.step(action)
-            rewards +=reward
+            
             next_obs = [next_obs[key] for key in obs_keys]
             next_obs = np.concatenate(next_obs)
             # # print(next_obs)
@@ -163,8 +169,10 @@ if __name__ == "__main__":
             done = torch.tensor([0]).float().unsqueeze(0).to(reward_net_device)
             # get the reward from the reward network
             disc_rew = reward_net(obs_tensor, action_tensor, next_obs_tensor, done)
-            total_disc_rew += disc_rew  
-
+            total_disc_rew.append(disc_rew.item())
+            rewards.append(reward)
+            # print(type(reward))
+            # print(type(disc_rew.item()))
             obs = next_obs
             past_action = action
             #print(f"Discriminator Reward: {disc_rew}")
@@ -172,16 +180,61 @@ if __name__ == "__main__":
             #     print(f"gripper action: {action[6]}")
             if args.render:
                 env.render()
+
+                #print("******************Success*********************")
             # print("done", next_done)
             # print("info", info)
             #env.render()
             if next_done:
                 print("yessssssss")
+                if obs[2] > 0.8565:
+                    success_cnt += 1
                 break
        # video_path = os.path.join(video_dir, f"episode_{i+1}.mp4")
-        print(f"Total Discriminator Reward: {total_disc_rew}")
-        print(f"Total Reward: {rewards}")
-        env_rewards.append(rewards)
+        
+        print(f"Total Discriminator Reward: {sum(total_disc_rew)}")
+        print(f"Total Reward: {sum(rewards)}")
+
+
+        # Normalize rewards and total_disc_rew
+        rewards_normalized = scaler.fit_transform(np.array(rewards).reshape(-1, 1)).flatten()
+        total_disc_rew_normalized = scaler.fit_transform(np.array(total_disc_rew).reshape(-1, 1)).flatten()
+        
+        # Compute correlations
+        correlation = scipy.stats.spearmanr(rewards, total_disc_rew)
+        # normalized_pearson = scipy.stats.pearsonr(rewards_normalized, total_disc_rew_normalized)
+        # normalized_spearman = scipy.stats.spearmanr(rewards_normalized, total_disc_rew_normalized)
+        
+        print(f"Correlation (Spearman): {correlation[0]}")
+        # print(f"Normalized Pearson Correlation: {normalized_pearson[0]}")
+        # print(f"Normalized Spearman Correlation: {normalized_spearman[0]}")
+        
+        correlations.append(correlation[0])
+        # normalized_pearson_correlations.append(normalized_pearson[0])
+        # normalized_spearman_correlations.append(normalized_spearman[0])
+
+        env_rewards.append(sum(rewards))
+
         # imageio.mimwrite(video_path, frames, fps=20, codec='libx264')
         # print(f"Saved video for episode {i+1} at {video_path}")
+
+    print(f"Success Rate: {success_cnt}/{evaluate_times}")
     print(env_rewards)
+    print(correlations)
+    print(f"Average Reward: {np.mean(env_rewards)}")
+    print(f"Average Correlation: {np.mean(correlations)}")
+    print(f"reward list: {env_rewards}")
+    # print(f"Average Normalized Pearson Correlation: {np.mean(normalized_pearson_correlations)}")
+    # print(f"Average Normalized Spearman Correlation: {np.mean(normalized_spearman_correlations)}")
+
+    #write the results to a file
+    results_path = os.path.join(project_path, "results", args.exp_name, args.checkpoint, ".txt")
+    os.makedirs(os.path.dirname(results_path), exist_ok=True)
+    with open(results_path, "w") as f:
+        f.write(f"Success Rate: {success_cnt}/{evaluate_times}\n")
+        f.write(f"Average Reward: {np.mean(env_rewards)}\n")
+        f.write(f"Average Correlation: {np.mean(correlations)}\n")
+        f.write(f"reward list: {env_rewards}\n")
+        f.write(f"correlation list: {correlations}\n")
+        # f.write(f"Average Normalized Pearson Correlation: {np.mean(normalized_pearson_correlations)}\n")
+        # f.write(f"Average Normalized Spearman Correlation

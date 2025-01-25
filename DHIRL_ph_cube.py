@@ -179,9 +179,7 @@ if __name__ == "__main__":
     # print("**********************************************************")
     traj_index = []
     for i in range(len(trajs_for_shaping)):
-        if trajs_for_shaping[i].obs.shape[1] != 31:
-            #print(trajs_for_shaping[i].obs.shape)
-            traj_index.append(i)
+        traj_index.append(i)
                                                                   
     learner = PPO(
         env=envs,
@@ -215,11 +213,11 @@ if __name__ == "__main__":
 # "progress_regularization"]
     shape_reward = [
         #"demo_range_loss",
-        "delta_progress_reward_loss",
-        "advantage_sign_loss",
-        "value_sign_loss",
-        "reward_sign_loss",
-        "subtrajectory_proportion_loss",
+        #"delta_progress_reward_loss",
+        #"advantage_sign_loss",
+        #"value_sign_loss",
+        #"reward_sign_loss",
+        #"subtrajectory_proportion_loss",
         "end_progress_loss",
     ]
     #print("trajectory for shaping:", len(trajs_for_shaping))

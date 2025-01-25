@@ -97,7 +97,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=False,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=600,                            # each episode terminates after 300 steps
+        horizon=800,                            # each episode terminates after 300 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     # print out possible obs_keys for the environment PickPlaceCan
 
 
-    obs_keys = ["Can_pos", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
+    obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
 
     
     envs = make_vec_env_robosuite(
@@ -155,7 +155,7 @@ if __name__ == "__main__":
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
                                          use_half_gripper_obs=True,
-                                         use_cube_pos=True
+                                         #use_cube_pos=True
                                          )
     
     # for i in range(len(trajs)):
@@ -169,7 +169,7 @@ if __name__ == "__main__":
                                          sequential_obs_keys=args.sequence_keys,
                                          obs_seq_len=args.obs_seq_len,
                                          use_half_gripper_obs=True,
-                                         use_cube_pos=True
+                                         #use_cube_pos=True
                                                                        )
     # type of reward shaping to use
     # change this to enable or disable reward shaping
@@ -187,9 +187,9 @@ if __name__ == "__main__":
                                                                   
     learner = PPO(
         env=envs,
-        policy=CustomLoggingPolicy,  # Use your custom policy here
-        #policy=MlpPolicy,
-        batch_size=256,
+        #policy=CustomLoggingPolicy,  # Use your custom policy here
+        policy=MlpPolicy,
+        batch_size=128,
         ent_coef=0.01,
         learning_rate=3e-4,
         gamma=0.95,
@@ -218,7 +218,7 @@ if __name__ == "__main__":
     shape_reward = [
         #"demo_range_loss",
         #"delta_progress_scale_loss",
-        "advantage_sign_loss",
+        #"advantage_sign_loss",
         #"value_sign_loss",
         #"reward_sign_loss",
         #"subtrajectory_proportion_loss"
@@ -228,7 +228,7 @@ if __name__ == "__main__":
         demonstrations=trajs,
         demo_batch_size=64,
         gen_replay_buffer_capacity=20000,
-        n_disc_updates_per_round=5,
+        n_disc_updates_per_round=2,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,
@@ -272,7 +272,7 @@ if __name__ == "__main__":
         if i % 1 == 0:
             elapsed_time_seconds = time.time() - start_time
             elapsed_time_str = time.strftime("%H:%M:%S", time.gmtime(elapsed_time_seconds))
-            learner_rewards = evaluate_policy(learner, envs, n_eval_episodes=10)
+            learner_rewards = evaluate_policy(learner, envs, n_eval_episodes=5)
             print("learner mean reward at round", i, ":", np.mean(learner_rewards))
             print("running time ", i, "round :", elapsed_time_str)
             with open(record_file, "a") as f:
