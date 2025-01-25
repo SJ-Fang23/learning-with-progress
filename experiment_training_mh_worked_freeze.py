@@ -5,7 +5,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.ppo import MlpPolicy
 
 # from imitation.algorithms.adversarial.airl import AIRL
-from IRL_lib_mod.airl import AIRL
+from IRL_lib_mod.airl_updating import AIRL
 from imitation.algorithms.adversarial.airl import AIRL as AIRL_old
 from imitation.data import rollout
 from imitation.data.wrappers import RolloutInfoWrapper
@@ -71,8 +71,8 @@ if __name__ == "__main__":
     print("obs_seq_len", args.obs_seq_len)
 
 
-    project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    dataset_path = os.path.join(project_path,"human-demo/can-pick/can_low_dim_mh.hdf5")
+    project_path = "/home/hang/learning-with-progress/"
+    dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141_can_pick_mh.hdf5")
     log_dir = os.path.join(project_path,f"logs/{args.exp_name}")
     print(dataset_path)
     f = h5py.File(dataset_path,'r')
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=False,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=1000,                            # each episode terminates after 300 steps
+        horizon=500,                            # each episode terminates after 300 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -121,7 +121,7 @@ if __name__ == "__main__":
         "PickPlaceCan",
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
-        n_envs=20,
+        n_envs=12,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
@@ -188,8 +188,8 @@ if __name__ == "__main__":
     airl_trainer = AIRL(
         demonstrations=trajs,
         demo_batch_size=128,
-        gen_replay_buffer_capacity=30000,
-        n_disc_updates_per_round=5,
+        gen_replay_buffer_capacity=10000,
+        n_disc_updates_per_round=2,
         venv=envs,
         gen_algo=learner,
         reward_net=reward_net,

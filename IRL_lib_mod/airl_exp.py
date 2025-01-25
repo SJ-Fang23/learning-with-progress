@@ -651,4 +651,4 @@ class AIRL(common.AdversarialTrainer):
             save_path_this_time = Path(save_path_this_time)
             train_adversarial.save(self, save_path_this_time)
 
-        return train_stats
+        return None
