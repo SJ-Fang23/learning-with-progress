@@ -178,8 +178,8 @@ if __name__ == "__main__":
             #print(f"Discriminator Reward: {disc_rew}")
             # if action[6] > 0:
             #     print(f"gripper action: {action[6]}")
-            if args.render:
-                env.render()
+            # if args.render:
+            #     env.render()
 
                 #print("******************Success*********************")
             # print("done", next_done)

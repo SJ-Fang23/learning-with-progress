@@ -75,12 +75,12 @@ if __name__ == "__main__":
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     #dataset_path = os.path.join(project_path,"human-demo/" + args.env_name + "/low_dim_v141_" + args.env_name + "_" + args.dataset_type + ".hdf5")
     # dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
-    dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/can-pick/low_dim_v141_can-pick_ph.hdf5")
+    dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/can-pick/low_dim_v141_can_pick_mh.hdf5")
 
     f= h5py.File(dataset_path,'r')
     env_meta = json.loads(f["data"].attrs["env_args"])
     # make_env_kwargs = json.loads(f["data"].attrs["env_args"])["env_kwargs"]
-    # # enable rendering
+    # # # enable rendering
     # make_env_kwargs["has_renderer"] = True
     # make_env_kwargs["reward_shaping"] = True
     # make_env_kwargs['horizon'] = 300
@@ -94,8 +94,8 @@ if __name__ == "__main__":
         has_renderer=  args.render,           # no on-screen renderer
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
-        control_freq=10,                        # 20 hz control for applied actions
-        horizon=500,                            # each episode terminates after 200 steps
+        control_freq=20,                        # 20 hz control for applied actions
+        horizon=600,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     }
     reward_net_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    policy = PPO.load(f"{project_path}/learning-with-progress/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model", custom_objects=custom_objects, device = reward_net_device)
+    policy = PPO.load(f"{project_path}/learning-with-progress/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model", custom_objects=custom_objects, device = reward_net_device, weights_only=True)
     reward_net = torch.load(f"{project_path}/learning-with-progress/checkpoints/{args.exp_name}/{args.checkpoint}/reward_train.pt", map_location=reward_net_device)
     reward_net.eval()
     reward_net.to(reward_net_device)
@@ -150,10 +150,10 @@ if __name__ == "__main__":
             #action, _states = policy.predict(obs)
             action, _ = policy.predict(obs, deterministic=True)
             cnt += 1
-            if args.render:
-                env.render()
-                frame = env.render()
-                frames.append(frame)
+            # if args.render:
+            #     env.render()
+            #     frame = env.render()
+            #     frames.append(frame)
             obs = torch.tensor(obs).float().unsqueeze(0).to(reward_net_device)
             obs = obs.cpu().detach().numpy()
             # print("obs", obs)   
@@ -179,15 +179,17 @@ if __name__ == "__main__":
             disc_rew = reward_net(obs_tensor, action_tensor, next_obs_tensor, done)
             total_disc_rew.append(disc_rew.item())
             rewards.append(reward)
-            # print(type(reward))
-            # print(type(disc_rew.item()))
+
             obs = next_obs
             past_action = action
-            #print(f"Discriminator Reward: {disc_rew}")
+            
             # if action[6] > 0:
             #     print(f"gripper action: {action[6]}")
-            if args.render:
+            if args.render and cnt % 10 == 0:
                 env.render()
+                print(f"Discriminator Reward: {disc_rew}")
+                print(f"Reward: {reward}")
+                print(cnt)
 
                 #print("******************Success*********************")
             # print("done", next_done)
