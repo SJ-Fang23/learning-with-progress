@@ -389,7 +389,7 @@ if __name__ == "__main__":
     print(args.replay_demo_numbers)
     # replay_trajectory_and_collect_preference(args.dataset_path, args.replay_demo_numbers, args.collect_progress_times)
     replay_trajectory_and_collect_progress(
-        "lift/low_dim_v141_lift_ph.hdf5", 
+        "lift/low_dim_v141_lift_mh.hdf5", 
         reply_demo_indicies= [],
         replay_demo_nums=40,
         collect_progress_times=9,

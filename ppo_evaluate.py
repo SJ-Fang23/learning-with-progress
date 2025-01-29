@@ -75,7 +75,7 @@ if __name__ == "__main__":
         args.env_name,
         **make_env_kwargs,
     )
-    env = GymWrapper(env, keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
+    env = GymWrapper(env, keys = ["cube_pos", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
     policy = PPO.load(f"{project_path}/learning-with-progress/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model", env=env)
     # reward_net = (torch.load(f"{project_path}/checkpoints/disc_128/300/reward_train.pt"))
     # reward_net.eval()
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # estimate_reward = np.mean(estimate_reward)
     # print(f"Estimated Reward: {estimate_reward}")
     evaluate_times = 10
-    obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
+    obs_keys = ["cube_pos", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
     
     for i in range(evaluate_times):
         obs = env.reset()

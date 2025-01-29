@@ -1,68 +1,62 @@
 [
     {
         "start_step": 0,
-        "end_step": 13,
+        "end_step": 5,
         "start_progress": 0,
-        "end_progress": 5.0
+        "end_progress": 3.0
     },
     {
-        "start_step": 13,
-        "end_step": 26,
-        "start_progress": 5.0,
+        "start_step": 5,
+        "end_step": 11,
+        "start_progress": 3.0,
+        "end_progress": 6.0
+    },
+    {
+        "start_step": 11,
+        "end_step": 16,
+        "start_progress": 6.0,
         "end_progress": 10.0
     },
     {
-        "start_step": 26,
-        "end_step": 39,
+        "start_step": 16,
+        "end_step": 22,
         "start_progress": 10.0,
         "end_progress": 15.0
     },
     {
-        "start_step": 39,
-        "end_step": 53,
+        "start_step": 22,
+        "end_step": 28,
         "start_progress": 15.0,
         "end_progress": 25.0
     },
     {
-        "start_step": 53,
-        "end_step": 66,
+        "start_step": 28,
+        "end_step": 33,
         "start_progress": 25.0,
+        "end_progress": 30.0
+    },
+    {
+        "start_step": 33,
+        "end_step": 39,
+        "start_progress": 30.0,
         "end_progress": 35.0
     },
     {
-        "start_step": 66,
-        "end_step": 79,
+        "start_step": 39,
+        "end_step": 44,
         "start_progress": 35.0,
-        "end_progress": 50.0
-    },
-    {
-        "start_step": 79,
-        "end_step": 92,
-        "start_progress": 50.0,
-        "end_progress": 55.0
-    },
-    {
-        "start_step": 92,
-        "end_step": 106,
-        "start_progress": 55.0,
         "end_progress": 60.0
     },
     {
-        "start_step": 106,
-        "end_step": 119,
+        "start_step": 44,
+        "end_step": 50,
         "start_progress": 60.0,
-        "end_progress": 70.0
+        "end_progress": 63.0
     },
     {
-        "start_step": 119,
-        "end_step": 132,
-        "start_progress": 70.0,
-        "end_progress": 90.0
-    },
-    {
-        "start_step": 132,
-        "end_step": 145,
-        "start_progress": 90.0,
-        "end_progress": 100.0
+        "start_step": 50,
+        "end_step": 55,
+        "start_progress": 63.0,
+        "end_progress": 79.0
     }
 ]

@@ -29,17 +29,17 @@ import torch
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default="ppo_experiment")
+    parser.add_argument('--exp_name', type=str, default="ppo_can_pick")
     parser.add_argument('--checkpoint', type=str, default="")
     parser.add_argument('--env_name', type=str, default="PickPlaceCan")
 
     args = parser.parse_args()
     #project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    project_path = "/home/hang/learning-with-progress/"
+    project_path = "/home/hang/DHIRL_Progress/learning-with-progress/"
     if args.env_name == "NutAssemblySquare":
         dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
     elif args.env_name == "PickPlaceCan":
-        dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141_can_pick_mh.hdf5")
+        dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141_can-pick_ph.hdf5")
     
     f= h5py.File(dataset_path,'r')
     env_meta = json.loads(f["data"].attrs["env_args"])
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=600,                            # each episode terminates after 200 steps
+        horizon=800,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         args.env_name,
         obs_keys = ["object-state","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
         rng=np.random.default_rng(SEED),
-        n_envs=10,
+        n_envs=12,
         parallel=True,
         post_wrappers=[lambda env, _: RolloutInfoWrapper(env)],  # to compute rollouts
         env_make_kwargs=make_env_kwargs,
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     )
     obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
     traning_time = 100
-    training_round = 20000
+    training_round = 100000
     start = 0
     if args.checkpoint != "":
         learner = PPO.load(f"{project_path}/checkpoints/{args.exp_name}/"+args.checkpoint+"/gen_policy/model", env=envs)
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     reward_net_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     learner_rewards_before_training = evaluate_policy(learner, envs, n_eval_episodes=5)
     print("mean reward before training:", np.mean(learner_rewards_before_training))
-    record_file = os.path.join(project_path, "ppo_learning_test", args.exp_name + ".txt")
+    record_file = "ppo-can-pick-record.txt"
     with open(record_file, "w") as f:
         f.write("mean reward before training:" + str(np.mean(learner_rewards_before_training)) + "\n")
     f.close()
