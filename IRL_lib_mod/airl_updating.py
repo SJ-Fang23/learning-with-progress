@@ -320,7 +320,7 @@ class AIRL(common.AdversarialTrainer):
 
         progress_sign = th.relu(F.softsign(delta_progress)).to(device)
         # sign(-delta_value) is 1 if delta_value <= 0, else 0
-        value_sign    = th.relu(F.softsign(-delta_value)).to(device)
+        value_sign    = th.relu(F.softsign(delta_value)).to(device)
 
         loss = F.binary_cross_entropy(value_sign, progress_sign)
         return loss      
