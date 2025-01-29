@@ -129,7 +129,7 @@ if __name__ == "__main__":
         sequential_wrapper_kwargs = sequential_wrapper_kwargs
     )
 
-    annotation_dict = read_all_json("progress_data_mh")
+    annotation_dict = read_all_json("can-pick_mh")
 
     trajs = load_dataset_to_trajectories(["object","robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"],
                                          dataset_path = "human-demo/can-pick/low_dim_v141_can_pick_mh.hdf5", 
@@ -152,7 +152,8 @@ if __name__ == "__main__":
                                          use_half_gripper_obs=True)
     # type of reward shaping to use
     # change this to enable or disable reward shaping
-    #shape_reward = ["progress_sign_loss", "value_sign_loss", "advantage_sign_loss"]
+    #shape_reward = [ "advantage_sign_loss"]
+    
     shape_reward = []
 
     for i in range(len(trajs_for_shaping)):
@@ -163,7 +164,7 @@ if __name__ == "__main__":
         env=envs,
         policy=CustomLoggingPolicy,  # Use your custom policy here
         #policy=MlpPolicy,
-        batch_size=1024,
+        batch_size=128,
         ent_coef=0.01,
         learning_rate=3e-4,
         gamma=0.95,

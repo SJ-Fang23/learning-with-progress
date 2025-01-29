@@ -187,7 +187,7 @@ if __name__ == "__main__":
             #env.render()
             if next_done:
                 print("yessssssss")
-                if obs[2] > 0.8565:
+                if obs[2] > 0.8365:
                     success_cnt += 1
                 break
        # video_path = os.path.join(video_dir, f"episode_{i+1}.mp4")
