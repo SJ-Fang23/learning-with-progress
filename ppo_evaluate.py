@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name', type=str, default="default_experiment")
     parser.add_argument('--checkpoint', type=str, default="260")
-    parser.add_argument('--env_name', type=str, default="Lift")
+    parser.add_argument('--env_name', type=str, default="PickPlaceCan")
 
     args = parser.parse_args()
 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     if args.env_name == "NutAssemblySquare":
         dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
     elif args.env_name == "PickPlaceCan":
-        dataset_path = os.path.join(project_path,"human-demo/can-pick/low_dim_v141.hdf5")
+        dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/can-pick/low_dim_v141_can-pick_ph.hdf5")
     elif args.env_name == "Lift":
         dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/lift/low_dim_v141_lift_mh.hdf5")
     f= h5py.File(dataset_path,'r')
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     make_env_kwargs = dict(
         robots="Panda",             # load a Sawyer robot and a Panda robot
         gripper_types="default",                # use default grippers per robot arm
-        #controller_configs=env_meta["env_kwargs"]["controller_configs"],   # each arm is controlled using OSC
+        controller_configs=env_meta["env_kwargs"]["controller_configs"],   # each arm is controlled using OSC
         has_renderer=True,                      # on-screen rendering
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
@@ -75,7 +75,16 @@ if __name__ == "__main__":
         args.env_name,
         **make_env_kwargs,
     )
-    env = GymWrapper(env, keys = ["cube_pos", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
+    # env.reset()
+    # import time
+    # env.render()
+    # for i in range(10):
+    #     env.step([0,0,0,0,0,0,0])
+    #     env.render()
+    #     env.step([0,0,0,0,0,0,0])
+    #     env.render()
+    #     time.sleep(10)
+    env = GymWrapper(env, keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"])
     policy = PPO.load(f"{project_path}/learning-with-progress/checkpoints/{args.exp_name}/{args.checkpoint}/gen_policy/model", env=env)
     # reward_net = (torch.load(f"{project_path}/checkpoints/disc_128/300/reward_train.pt"))
     # reward_net.eval()
@@ -85,7 +94,7 @@ if __name__ == "__main__":
     # estimate_reward = np.mean(estimate_reward)
     # print(f"Estimated Reward: {estimate_reward}")
     evaluate_times = 10
-    obs_keys = ["cube_pos", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
+    obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
     
     for i in range(evaluate_times):
         obs = env.reset()
@@ -95,6 +104,9 @@ if __name__ == "__main__":
         cnt = 0
         rewards= 0
         disc_rewards = 0
+        env.render()
+        import time
+        time.sleep(10)
         while not done:
             #print("I reached here")
             cnt += 1
@@ -125,6 +137,7 @@ if __name__ == "__main__":
             past_action = action
 
             env.render()
+            time.sleep(5)
             if next_done:
                 break
         print(f"Total Reward: {rewards}")

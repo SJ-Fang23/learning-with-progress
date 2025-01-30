@@ -29,7 +29,8 @@ import torch
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp_name', type=str, default="ppo_can_pick")
+    parser.add_argument('--exp_name', type=str, default="ppo_can_pick_hrz_500")
+    parser.add_argument('--load_exp_name', type=str, default="")
     parser.add_argument('--checkpoint', type=str, default="")
     parser.add_argument('--env_name', type=str, default="PickPlaceCan")
 
@@ -52,7 +53,7 @@ if __name__ == "__main__":
         render_camera="frontview",              # visualize the "frontview" camera
         has_offscreen_renderer=True,           # no off-screen rendering
         control_freq=20,                        # 20 hz control for applied actions
-        horizon=800,                            # each episode terminates after 200 steps
+        horizon=500,                            # each episode terminates after 200 steps
         use_object_obs=True,                   # no observations needed
         use_camera_obs=False,
         reward_shaping=True,
@@ -87,11 +88,11 @@ if __name__ == "__main__":
         seed=SEED,
     )
     obs_keys = ["object-state", "robot0_eef_pos", "robot0_eef_quat", "robot0_gripper_qpos"]
-    traning_time = 100
-    training_round = 100000
+    traning_time = 200
+    training_round = 200000
     start = 0
-    if args.checkpoint != "":
-        learner = PPO.load(f"{project_path}/checkpoints/{args.exp_name}/"+args.checkpoint+"/gen_policy/model", env=envs)
+    if args.load_exp_name != "":
+        learner = PPO.load(f"{project_path}/checkpoints/{args.load_exp_name}/"+args.checkpoint+"/gen_policy/model", env=envs)
         training_round += int(args.checkpoint)
         start = int(args.checkpoint) + 1
 
@@ -105,12 +106,12 @@ if __name__ == "__main__":
     for i in range(start, training_round):
         
         learner.learn(total_timesteps=traning_time)
-        if i % 20 == 0:
+        if i % 1 == 0:
             learner.save(f"{project_path}/checkpoints/{args.exp_name}/"+str(i)+"/gen_policy/model")
             learner_rewards = evaluate_policy(learner, envs, n_eval_episodes=5)
             print("mean reward at round", i, ":", np.mean(learner_rewards))
-        with open(record_file, "a") as f:
-            f.write("mean reward at round " + str(i) + ":" + str(np.mean(learner_rewards)) + "\n")
-        f.close()
+            with open(record_file, "a") as f:
+                f.write("mean reward at round " + str(i) + ":" + str(np.mean(learner_rewards)) + "\n")
+            f.close()
         # if np.mean(learner_rewards) > 100:
         #     break

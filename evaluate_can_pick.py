@@ -75,7 +75,7 @@ if __name__ == "__main__":
     project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     #dataset_path = os.path.join(project_path,"human-demo/" + args.env_name + "/low_dim_v141_" + args.env_name + "_" + args.dataset_type + ".hdf5")
     # dataset_path = os.path.join(project_path,"human-demo/square/low_dim_v141.hdf5")
-    dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/can-pick/low_dim_v141_can_pick_mh.hdf5")
+    dataset_path = os.path.join(project_path,"learning-with-progress/human-demo/can-pick/low_dim_v141_can-pick_ph.hdf5")
 
     f= h5py.File(dataset_path,'r')
     env_meta = json.loads(f["data"].attrs["env_args"])
